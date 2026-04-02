@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 const outDir = 'out';
 const classesDir = `${outDir}/classes`;
+const jacocoExec = `${outDir}/jacoco.exec`;
 
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(classesDir, { recursive: true });
@@ -30,8 +31,11 @@ if (mainSources.length === 0 && testSources.length === 0) {
   process.exit(0);
 }
 
+const jacocoAgent = execFileSync(process.platform === 'win32' ? 'gradlew.bat' : './gradlew', ['--quiet', 'printJacocoAgentPath'], { encoding: 'utf8' }).trim();
+
 execFileSync('javac', ['-d', classesDir, ...mainSources, ...testSources], { stdio: 'inherit' });
-execFileSync('java', ['-ea', '-cp', classesDir, 'com.audiolayer.testsupport.TestRunner'], { stdio: 'inherit' });
+execFileSync('java', [`-javaagent:${jacocoAgent}=destfile=${jacocoExec},append=false`, '-ea', '-cp', classesDir, 'com.audiolayer.testsupport.TestRunner'], { stdio: 'inherit' });
+execFileSync(process.platform === 'win32' ? 'gradlew.bat' : './gradlew', ['coverageVerification'], { stdio: 'inherit' });
 
 function listJava(root) {
   const result = [];

@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'net.neoforged.gradle.userdev' version '7.1.21'
+    id 'jacoco'
 }
 
 tasks.named('wrapper', Wrapper).configure {
@@ -106,4 +107,58 @@ publishing {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+tasks.register('printJacocoAgentPath') {
+    doLast {
+        println(configurations.jacocoAgent.singleFile.absolutePath)
+    }
+}
+
+tasks.register('coverageReport', JacocoReport) {
+    executionData fileTree(projectDir) {
+        include 'out/jacoco.exec'
+    }
+    classDirectories.setFrom(fileTree('out/classes') {
+        include '**/*.class'
+        exclude '**/testsupport/**'
+    })
+    sourceDirectories.setFrom(files('src/main/java'))
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = false
+        html.outputLocation = layout.buildDirectory.dir('reports/jacoco/html')
+        xml.outputLocation = layout.buildDirectory.file('reports/jacoco/jacoco.xml')
+    }
+    onlyIf {
+        file('out/jacoco.exec').exists()
+    }
+}
+
+tasks.register('coverageVerification', JacocoCoverageVerification) {
+    executionData fileTree(projectDir) {
+        include 'out/jacoco.exec'
+    }
+    classDirectories.setFrom(fileTree('out/classes') {
+        include '**/*.class'
+        exclude '**/testsupport/**'
+    })
+    sourceDirectories.setFrom(files('src/main/java'))
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+        }
+    }
+    onlyIf {
+        file('out/jacoco.exec').exists()
+    }
 }
