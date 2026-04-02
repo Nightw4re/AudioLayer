@@ -37,10 +37,6 @@ jobs:
           java-version: 21
           distribution: temurin
 
-      - name: Setup Gradle
-        if: steps.version_check.outputs.changed == 'true'
-        uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v4
-
       - name: Generate changelog
         if: steps.version_check.outputs.changed == 'true'
         id: changelog
@@ -53,7 +49,7 @@ jobs:
 
       - name: Build
         if: steps.version_check.outputs.changed == 'true'
-        run: ./gradlew build --no-daemon
+        run: gradle build --no-daemon
 
       - name: Create GitHub Release
         if: steps.version_check.outputs.changed == 'true'

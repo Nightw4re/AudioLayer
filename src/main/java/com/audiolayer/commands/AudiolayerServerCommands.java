@@ -66,7 +66,7 @@ public final class AudiolayerServerCommands {
                                                                         ResourceLocationArgument.getId(context, "sound_id").toString(),
                                                                         IntegerArgumentType.getInteger(context, "count"),
                                                                         FloatArgumentType.getFloat(context, "start"),
-                                                                        FloatArgumentType.getFloat(context, "duration")))))))))
+                                                                        FloatArgumentType.getFloat(context, "duration"))))))))
         );
     }
 

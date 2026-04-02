@@ -17,11 +17,8 @@ jobs:
           java-version: 21
           distribution: temurin
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v4
-
       - name: Build
-        run: ./gradlew build --no-daemon
+        run: gradle build --no-daemon
 
       - name: Upload artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v4
