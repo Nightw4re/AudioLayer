@@ -1,0 +1,65 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
+
+      - name: Read mod version
+        id: version
+        run: echo "value=$(grep '^mod_version' gradle.properties | cut -d= -f2)" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        uses: orhun/git-cliff-action@14086b853dd433fb86e2dede8c46c574ef9f7e81 # v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Build
+        run: ./gradlew build --no-daemon
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          name: Audiolayer v${{ steps.version.outputs.value }}
+          body: ${{ steps.changelog.outputs.content }}
+          files: build/libs/audiolayer-[0-9]*.jar
+
+      - name: Publish to CurseForge
+        uses: Kir-Antipov/mc-publish@9c5a2e58cfe2a4f80f1e5a61453b1cf9e7b61fb5 # v3.3
+        with:
+          curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+
+          files: build/libs/audiolayer-[0-9]*.jar
+          name: Audiolayer v${{ steps.version.outputs.value }}
+          version: ${{ steps.version.outputs.value }}
+          version-type: release
+          changelog: ${{ steps.changelog.outputs.content }}
+          loaders: neoforge
+          game-versions: 1.21.1
+          java: 21
