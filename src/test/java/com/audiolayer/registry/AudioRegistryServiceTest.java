@@ -19,7 +19,7 @@ public final class AudioRegistryServiceTest {
                 "music",
                 "atlantis_intro",
                 new SoundId("audiolayer", "music.atlantis_intro")
-        )), Path.of("cache"));
+        )));
 
         TestAssertions.assertTrue(registry.isLoaded(new SoundId("audiolayer", "music.atlantis_intro")));
         TestAssertions.assertEquals(1, registry.listSounds().size());

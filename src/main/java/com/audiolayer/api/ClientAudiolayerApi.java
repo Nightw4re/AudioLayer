@@ -1,16 +1,15 @@
 package com.audiolayer.api;
 
-import com.audiolayer.audio.AudiolayerSoundInstance;
+import com.audiolayer.audio.Mp3SoundInstance;
 import com.audiolayer.commands.AudiolayerCommandSupport;
 import com.audiolayer.registry.AudiolayerManager;
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
 
+import java.util.Optional;
 import java.util.Set;
 
 public final class ClientAudiolayerApi implements AudiolayerApi {
     private final AudiolayerManager manager;
-    private AudiolayerSoundInstance currentInstance;
+    private Mp3SoundInstance currentInstance;
 
     public ClientAudiolayerApi(AudiolayerManager manager) {
         this.manager = manager;
@@ -27,7 +26,7 @@ public final class ClientAudiolayerApi implements AudiolayerApi {
     }
 
     @Override
-    public java.util.Optional<com.audiolayer.audio.LoadedAudioAsset> get(SoundId id) {
+    public Optional<com.audiolayer.audio.LoadedAudioAsset> get(SoundId id) {
         return manager.get(id);
     }
 
@@ -45,12 +44,8 @@ public final class ClientAudiolayerApi implements AudiolayerApi {
     public void play(SoundId id, int count, float startSeconds, float durationSeconds) {
         manager.get(id).ifPresent(asset -> {
             stopCurrent();
-            boolean loop = AudiolayerCommandSupport.shouldLoop(count);
-            int durationTicks = AudiolayerCommandSupport.durationTicks(count, durationSeconds, asset.durationSeconds());
-            int loopDurationTicks = AudiolayerCommandSupport.loopDurationTicks(count, durationSeconds, asset.durationSeconds());
-            ResourceLocation location = ResourceLocation.fromNamespaceAndPath(id.namespace(), id.path());
-            currentInstance = new AudiolayerSoundInstance(location, loop, startSeconds, durationTicks, loopDurationTicks);
-            Minecraft.getInstance().getSoundManager().play(currentInstance);
+            currentInstance = new Mp3SoundInstance(asset.sourceFile(), count, startSeconds, durationSeconds);
+            currentInstance.play();
         });
     }
 
@@ -60,10 +55,9 @@ public final class ClientAudiolayerApi implements AudiolayerApi {
     }
 
     private void stopCurrent() {
-        if (currentInstance != null) {
-            currentInstance.forceStop();
-            Minecraft.getInstance().getSoundManager().stop(currentInstance);
-            currentInstance = null;
+        if (currentInstance != null && !currentInstance.isStopped()) {
+            currentInstance.stop();
         }
+        currentInstance = null;
     }
 }

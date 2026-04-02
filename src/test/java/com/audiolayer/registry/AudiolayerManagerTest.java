@@ -8,7 +8,6 @@ import com.audiolayer.cache.JsonCacheIndexRepository;
 import com.audiolayer.config.AudiolayerConfig;
 import com.audiolayer.config.FilenameSanitizer;
 import com.audiolayer.config.SoundIdMapper;
-import com.audiolayer.conversion.FakeConversionService;
 import com.audiolayer.testsupport.TestAssertions;
 
 import java.nio.file.Files;
@@ -28,9 +27,7 @@ public final class AudiolayerManagerTest {
                 config,
                 scanner,
                 new JsonCacheIndexRepository(cache.resolve("index.json")),
-                new AudioRegistryService(),
-                new FakeConversionService(true),
-                new com.audiolayer.resource.RuntimeResourcePackWriter(cache.resolve("runtime-pack"))
+                path -> 0f
         );
 
         ReloadSummary summary = manager.reload();

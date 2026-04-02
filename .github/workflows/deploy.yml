@@ -1,5 +1,8 @@
 name: Deploy
 
+env:
+  MC_VERSION: 1.21.1
+
 on:
   push:
     branches:
@@ -56,9 +59,9 @@ jobs:
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
         with:
           tag_name: v${{ steps.version_check.outputs.current }}
-          name: Audiolayer v${{ steps.version_check.outputs.current }}
+          name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}
           body: ${{ steps.changelog.outputs.content }}
-          files: build/libs/audiolayer-[0-9]*.jar
+          files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}.jar
 
       - name: Publish to CurseForge
         if: steps.version_check.outputs.changed == 'true'
@@ -67,8 +70,8 @@ jobs:
           curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
 
-          files: build/libs/audiolayer-[0-9]*.jar
-          name: Audiolayer v${{ steps.version_check.outputs.current }}
+          files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}.jar
+          name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}
           version: ${{ steps.version_check.outputs.current }}
           version-type: release
           changelog: ${{ steps.changelog.outputs.content }}

@@ -10,9 +10,6 @@ import com.audiolayer.cache.CacheEntry;
 import com.audiolayer.cache.CacheIndex;
 import com.audiolayer.cache.CacheIndexRepository;
 import com.audiolayer.config.AudiolayerConfig;
-import com.audiolayer.conversion.AudioConversionService;
-import com.audiolayer.conversion.ConversionResult;
-import com.audiolayer.resource.RuntimeResourcePackWriter;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -29,9 +26,6 @@ public final class AudiolayerManager implements AudiolayerService {
     private final AudiolayerConfig config;
     private final InputAudioScanner scanner;
     private final CacheIndexRepository cacheIndexRepository;
-    private final AudioConversionService conversionService;
-    private final AudioRegistryService registry;
-    private final RuntimeResourcePackWriter resourcePackWriter;
     private final Function<Path, Float> durationReader;
     private final Map<SoundId, LoadedAudioAsset> loaded = new LinkedHashMap<>();
 
@@ -39,29 +33,12 @@ public final class AudiolayerManager implements AudiolayerService {
             AudiolayerConfig config,
             InputAudioScanner scanner,
             CacheIndexRepository cacheIndexRepository,
-            AudioRegistryService registry,
-            AudioConversionService conversionService,
-            RuntimeResourcePackWriter resourcePackWriter,
             Function<Path, Float> durationReader
     ) {
         this.config = config;
         this.scanner = scanner;
         this.cacheIndexRepository = cacheIndexRepository;
-        this.conversionService = conversionService;
-        this.registry = registry;
-        this.resourcePackWriter = resourcePackWriter;
         this.durationReader = durationReader;
-    }
-
-    public AudiolayerManager(
-            AudiolayerConfig config,
-            InputAudioScanner scanner,
-            CacheIndexRepository cacheIndexRepository,
-            AudioRegistryService registry,
-            AudioConversionService conversionService,
-            RuntimeResourcePackWriter resourcePackWriter
-    ) {
-        this(config, scanner, cacheIndexRepository, registry, conversionService, resourcePackWriter, path -> 0f);
     }
 
     @Override
@@ -85,51 +62,49 @@ public final class AudiolayerManager implements AudiolayerService {
             var descriptors = scanner.scan(config.inputDirectory());
             var index = cacheIndexRepository.load();
             loaded.clear();
+
+            Map<String, CacheEntry> entriesByHash = new LinkedHashMap<>();
+            for (CacheEntry e : index.entries()) {
+                entriesByHash.put(e.sourceHash(), e);
+            }
+
             int reused = 0;
-            int failed = 0;
-            Map<String, CacheEntry> entriesByHash = index.entries().stream().collect(java.util.stream.Collectors.toMap(
-                    CacheEntry::sourceHash,
-                    entry -> entry,
-                    (a, b) -> a,
-                    LinkedHashMap::new
-            ));
+
             for (AudioSourceDescriptor descriptor : descriptors) {
                 CacheEntry existing = entriesByHash.get(descriptor.contentHash());
-                Path cacheFile = existing != null ? existing.cacheFile() : config.cacheDirectory().resolve(descriptor.contentHash() + ".ogg");
-                if (existing != null && java.nio.file.Files.exists(cacheFile)) {
+                float duration;
+                if (existing != null) {
+                    duration = existing.durationSeconds();
                     reused++;
                 } else {
-                    ConversionResult conversion = conversionService.convert(descriptor, cacheFile);
-                    if (!conversion.success()) {
-                        LOGGER.severe("Conversion failed for " + descriptor.absolutePath() + ": " + conversion.message());
-                        failed++;
-                        continue;
-                    }
+                    duration = durationReader.apply(descriptor.absolutePath());
                 }
-                float duration = durationReader.apply(cacheFile);
                 loaded.put(descriptor.soundId(), new LoadedAudioAsset(
                         descriptor.soundId(),
                         descriptor.absolutePath(),
-                        cacheFile,
                         descriptor.contentHash(),
                         duration
                 ));
             }
-            registry.rebuild(descriptors, config.cacheDirectory());
+
             cacheIndexRepository.save(new CacheIndex(descriptors.stream()
-                    .map(d -> new CacheEntry(
-                            d.soundId().toString(),
-                            d.contentHash(),
-                            d.relativePath(),
-                            config.cacheDirectory().resolve(d.contentHash() + ".ogg"),
-                            Instant.now()
-                    ))
+                    .map(d -> {
+                        float dur = loaded.containsKey(d.soundId())
+                                ? loaded.get(d.soundId()).durationSeconds()
+                                : 0f;
+                        return new CacheEntry(
+                                d.soundId().toString(),
+                                d.contentHash(),
+                                d.relativePath(),
+                                dur,
+                                Instant.now()
+                        );
+                    })
                     .toList()));
-            resourcePackWriter.write(loaded.values());
-            return new ReloadSummary(descriptors.size(), loaded.size(), reused, failed);
+
+            return new ReloadSummary(descriptors.size(), loaded.size(), reused, 0);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to reload audio bridge", e);
+            throw new IllegalStateException("Failed to reload audiolayer", e);
         }
     }
-
 }

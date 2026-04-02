@@ -9,7 +9,7 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = mod_version
+version = "${minecraft_version}-${mod_version}"
 group = mod_group_id
 
 sourceSets.main.resources {
@@ -22,7 +22,15 @@ repositories {
 }
 
 base {
-    archivesName = mod_id
+    archivesName = "${mod_id}-neoforge"
+}
+
+tasks.named('jar').configure {
+    archiveClassifier = 'slim'
+}
+
+tasks.named('jarJar').configure {
+    archiveClassifier = ''
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
@@ -33,10 +41,7 @@ runs {
         systemProperty 'forge.logging.console.level', 'debug'
         modSource project.sourceSets.main
         dependencies {
-            runtime 'ws.schild:jave-core:3.4.0'
-            runtime 'ws.schild:jave-nativebin-win64:3.4.0'
-            runtime 'ws.schild:jave-nativebin-linux64:3.4.0'
-            runtime 'ws.schild:jave-nativebin-osx64:3.4.0'
+            runtime 'javazoom:jlayer:1.0.1'
         }
     }
     client {
@@ -61,18 +66,9 @@ configurations {
 dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
 
-    implementation 'ws.schild:jave-core:3.4.0'
-    implementation 'ws.schild:jave-nativebin-win64:3.4.0'
-    implementation 'ws.schild:jave-nativebin-linux64:3.4.0'
-    implementation 'ws.schild:jave-nativebin-osx64:3.4.0'
-    localRuntime 'ws.schild:jave-core:3.4.0'
-    localRuntime 'ws.schild:jave-nativebin-win64:3.4.0'
-    localRuntime 'ws.schild:jave-nativebin-linux64:3.4.0'
-    localRuntime 'ws.schild:jave-nativebin-osx64:3.4.0'
-    jarJar('ws.schild:jave-core:[3.4.0,4.0)') { jarJar.ranged(it, '[3.4.0,4.0)') }
-    jarJar('ws.schild:jave-nativebin-win64:[3.4.0,4.0)') { jarJar.ranged(it, '[3.4.0,4.0)') }
-    jarJar('ws.schild:jave-nativebin-linux64:[3.4.0,4.0)') { jarJar.ranged(it, '[3.4.0,4.0)') }
-    jarJar('ws.schild:jave-nativebin-osx64:[3.4.0,4.0)') { jarJar.ranged(it, '[3.4.0,4.0)') }
+    implementation 'javazoom:jlayer:1.0.1'
+    localRuntime 'javazoom:jlayer:1.0.1'
+    jarJar('javazoom:jlayer:[1.0.1,2.0)') { jarJar.ranged(it, '[1.0.1,2.0)') }
 }
 
 tasks.withType(ProcessResources).configureEach {
@@ -110,7 +106,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.named('test', Test).configure {
-    failOnNoDiscoveredTests = false
+    jvmArgs '-ea'
 }
 
 jacoco {

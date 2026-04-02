@@ -29,7 +29,10 @@ const MINECRAFT_DEPENDENT = [
   'ClientAudiolayerApi.java',
   'AudiolayerSoundInstance.java',
   'SoundSeekUtil.java',
+  'Mp3SoundInstance.java',
+  'Mp3StreamDecoder.java',
   'Jave2AudioConversionService.java',
+  'OggVorbisEncoder.java',
   'ExternalFfmpegAudioConversionService.java',
 ];
 const mainSources = listJava('src/main/java').filter((file) => !MINECRAFT_DEPENDENT.some((name) => file.endsWith(name)));

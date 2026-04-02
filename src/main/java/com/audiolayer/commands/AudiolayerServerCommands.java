@@ -40,6 +40,15 @@ public final class AudiolayerServerCommands {
                                     ), false);
                                     return 1;
                                 }))
+                        .then(Commands.literal("reload")
+                                .requires(src -> src.hasPermission(2))
+                                .executes(context -> {
+                                    var summary = manager.reload();
+                                    context.getSource().sendSuccess(() -> Component.literal(
+                                            "Reloaded: " + summary.loadedAssets() + " sounds (" + summary.reusedAssets() + " cached)"
+                                    ), true);
+                                    return 1;
+                                }))
                         .then(Commands.literal("stop")
                                 .executes(context -> {
                                     PacketDistributor.sendToPlayer(context.getSource().getPlayerOrException(),

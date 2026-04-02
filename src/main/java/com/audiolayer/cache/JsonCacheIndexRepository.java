@@ -28,7 +28,7 @@ public final class JsonCacheIndexRepository implements CacheIndexRepository {
         for (String line : content.strip().split("\n")) {
             String[] parts = line.split("\\|", -1);
             if (parts.length == 5) {
-                entries.add(new CacheEntry(parts[0], parts[1], parts[2], Path.of(parts[3]), Instant.parse(parts[4])));
+                entries.add(new CacheEntry(parts[0], parts[1], parts[2], Float.parseFloat(parts[3]), Instant.parse(parts[4])));
             }
         }
         return new CacheIndex(entries);
@@ -42,7 +42,7 @@ public final class JsonCacheIndexRepository implements CacheIndexRepository {
             sb.append(entry.soundId()).append("|")
                     .append(entry.sourceHash()).append("|")
                     .append(entry.sourceRelativePath()).append("|")
-                    .append(entry.cacheFile()).append("|")
+                    .append(entry.durationSeconds()).append("|")
                     .append(entry.generatedAt()).append("\n");
         }
         Files.writeString(indexFile, sb.toString(), StandardCharsets.UTF_8);

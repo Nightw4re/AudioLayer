@@ -2,10 +2,13 @@ package com.audiolayer.testsupport;
 
 public final class TestRunner {
     private static final String[] TESTS = {
+            "com.audiolayer.api.SoundIdTest",
+            "com.audiolayer.api.AudiolayerProviderTest",
             "com.audiolayer.config.FilenameSanitizerTest",
             "com.audiolayer.config.SoundIdMapperTest",
             "com.audiolayer.audio.HashServiceTest",
             "com.audiolayer.audio.InputAudioScannerTest",
+            "com.audiolayer.audio.StreamLoopControllerTest",
             "com.audiolayer.cache.JsonCacheIndexRepositoryTest",
             "com.audiolayer.commands.AudiolayerCommandSupportTest",
             "com.audiolayer.commands.AudiolayerCommandReloadTest",

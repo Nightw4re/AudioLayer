@@ -14,7 +14,7 @@ public final class JsonCacheIndexRepositoryTest {
                 "audiolayer:music.atlantis_intro",
                 "hash",
                 "music/atlantis_intro.mp3",
-                Path.of("cache/hash.ogg"),
+                120f,
                 Instant.parse("2026-03-29T00:00:00Z")
         )));
 
