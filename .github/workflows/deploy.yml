@@ -2,8 +2,10 @@ name: Deploy
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - 'gradle.properties'
 
 permissions:
   contents: write
@@ -16,22 +18,33 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check version changed
+        id: version_check
+        run: |
+          CURRENT=$(grep '^mod_version' gradle.properties | cut -d= -f2)
+          PREVIOUS=$(git show HEAD~1:gradle.properties 2>/dev/null | grep '^mod_version' | cut -d= -f2 || echo "")
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Java 21
+        if: steps.version_check.outputs.changed == 'true'
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v4
         with:
           java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
+        if: steps.version_check.outputs.changed == 'true'
         uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v4
 
-      - name: Read mod version
-        id: version
-        run: echo "value=$(grep '^mod_version' gradle.properties | cut -d= -f2)" >> $GITHUB_OUTPUT
-
       - name: Generate changelog
+        if: steps.version_check.outputs.changed == 'true'
         id: changelog
-        uses: orhun/git-cliff-action@14086b853dd433fb86e2dede8c46c574ef9f7e81 # v4
+        uses: orhun/git-cliff-action@c93ef52f3d0ddcdcc9bd5447d98d458a11cd4f72 # v4
         with:
           config: cliff.toml
           args: --latest --strip header
@@ -39,25 +52,28 @@ jobs:
           OUTPUT: CHANGELOG.md
 
       - name: Build
+        if: steps.version_check.outputs.changed == 'true'
         run: ./gradlew build --no-daemon
 
       - name: Create GitHub Release
+        if: steps.version_check.outputs.changed == 'true'
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
         with:
-          tag_name: v${{ steps.version.outputs.value }}
-          name: Audiolayer v${{ steps.version.outputs.value }}
+          tag_name: v${{ steps.version_check.outputs.current }}
+          name: Audiolayer v${{ steps.version_check.outputs.current }}
           body: ${{ steps.changelog.outputs.content }}
           files: build/libs/audiolayer-[0-9]*.jar
 
       - name: Publish to CurseForge
+        if: steps.version_check.outputs.changed == 'true'
         uses: Kir-Antipov/mc-publish@9c5a2e58cfe2a4f80f1e5a61453b1cf9e7b61fb5 # v3.3
         with:
           curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
 
           files: build/libs/audiolayer-[0-9]*.jar
-          name: Audiolayer v${{ steps.version.outputs.value }}
-          version: ${{ steps.version.outputs.value }}
+          name: Audiolayer v${{ steps.version_check.outputs.current }}
+          version: ${{ steps.version_check.outputs.current }}
           version-type: release
           changelog: ${{ steps.changelog.outputs.content }}
           loaders: neoforge
