@@ -1,5 +1,8 @@
 name: Build check
 
+env:
+  MC_VERSION: 1.21.1
+
 on:
   pull_request_review:
     types: [submitted]
@@ -23,6 +26,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v4
         with:
-          name: audiolayer-${{ github.sha }}
-          path: build/libs/audiolayer-*.jar
+          name: audiolayer-neoforge-${{ github.sha }}
+          path: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-*.jar
           if-no-files-found: error
