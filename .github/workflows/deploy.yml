@@ -66,7 +66,7 @@ jobs:
 
       - name: Publish to CurseForge
         if: steps.version_check.outputs.changed == 'true'
-        uses: Kir-Antipov/mc-publish@9c5a2e58cfe2a4f80f1e5a61453b1cf9e7b61fb5 # v3.3
+        uses: Kir-Antipov/mc-publish@v3.3
         with:
           curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
