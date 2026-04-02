@@ -1,0 +1,60 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm test",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["test"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm build",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "build"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "NeoForge: run client",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": ["runClient"],
+      "options": {
+        "env": {
+          "GRADLE_USER_HOME": "${workspaceFolder}\\.gradle"
+        }
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "NeoForge: run client (debug)",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": ["runClient", "--debug-jvm"],
+      "options": {
+        "env": {
+          "GRADLE_USER_HOME": "${workspaceFolder}\\.gradle"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": {
+          "regexp": "^(.*)$",
+          "file": 1,
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Listening for transport dt_socket at address:",
+          "endsPattern": "Listening for transport dt_socket at address:"
+        }
+      },
+      "group": "build"
+    }
+  ]
+}
