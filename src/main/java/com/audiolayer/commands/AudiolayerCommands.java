@@ -68,11 +68,9 @@ public final class AudiolayerCommands {
                                             SoundId id = AudiolayerCommandSupport.parseSoundId(raw);
                                             return api.get(id).map(asset -> {
                                                 boolean sourceExists = Files.exists(asset.sourceFile());
-                                                boolean cacheExists = Files.exists(asset.cacheFile());
                                                 context.getSource().sendSuccess(() -> Component.literal(
                                                         "id=" + asset.soundId()
                                                                 + " | source=" + (sourceExists ? "ok" : "missing")
-                                                                + " | cache=" + (cacheExists ? "ok" : "missing")
                                                                 + " | duration=" + asset.durationSeconds() + "s"
                                                                 + " | path=" + asset.sourceFile()
                                                 ), false);

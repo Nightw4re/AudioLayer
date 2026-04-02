@@ -7,7 +7,6 @@ import java.nio.file.Path;
 public record LoadedAudioAsset(
         SoundId soundId,
         Path sourceFile,
-        Path cacheFile,
         String sourceHash,
         float durationSeconds
 ) {}
