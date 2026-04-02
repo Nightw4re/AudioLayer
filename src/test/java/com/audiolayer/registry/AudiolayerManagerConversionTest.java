@@ -6,7 +6,6 @@ import com.audiolayer.cache.JsonCacheIndexRepository;
 import com.audiolayer.config.AudiolayerConfig;
 import com.audiolayer.config.FilenameSanitizer;
 import com.audiolayer.config.SoundIdMapper;
-import com.audiolayer.conversion.FakeConversionService;
 import com.audiolayer.testsupport.TestAssertions;
 
 import java.nio.file.Files;
@@ -22,15 +21,20 @@ public final class AudiolayerManagerConversionTest {
 
         AudiolayerConfig config = new AudiolayerConfig(input, cache, true);
         InputAudioScanner scanner = new InputAudioScanner(new SoundIdMapper(new FilenameSanitizer()), new HashService());
-        AudiolayerManager manager = new AudiolayerManager(config, scanner, new JsonCacheIndexRepository(cache.resolve("index.json")), new AudioRegistryService(), new FakeConversionService(true), new com.audiolayer.resource.RuntimeResourcePackWriter(cache.resolve("runtime-pack")));
+        AudiolayerManager manager = new AudiolayerManager(
+                config, scanner,
+                new JsonCacheIndexRepository(cache.resolve("index.json")),
+                path -> 42f
+        );
 
         var summary = manager.reload();
 
         TestAssertions.assertEquals(1, summary.scannedFiles());
         TestAssertions.assertEquals(1, summary.loadedAssets());
         TestAssertions.assertEquals(0, summary.failedFiles());
+
         var asset = manager.get(new com.audiolayer.api.SoundId("audiolayer", "music.track")).orElseThrow();
-        TestAssertions.assertTrue(Files.exists(asset.cacheFile()));
-        TestAssertions.assertTrue(Files.exists(cache.resolve("runtime-pack").resolve("assets/audiolayer/sounds/music_track.ogg")));
+        TestAssertions.assertEquals(42f, asset.durationSeconds());
+        TestAssertions.assertTrue(Files.exists(asset.sourceFile()));
     }
 }

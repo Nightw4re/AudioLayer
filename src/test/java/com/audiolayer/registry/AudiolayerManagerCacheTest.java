@@ -7,11 +7,11 @@ import com.audiolayer.cache.JsonCacheIndexRepository;
 import com.audiolayer.config.AudiolayerConfig;
 import com.audiolayer.config.FilenameSanitizer;
 import com.audiolayer.config.SoundIdMapper;
-import com.audiolayer.conversion.FakeConversionService;
 import com.audiolayer.testsupport.TestAssertions;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class AudiolayerManagerCacheTest {
     public static void run() throws Exception {
@@ -24,31 +24,25 @@ public final class AudiolayerManagerCacheTest {
         AudiolayerConfig config = new AudiolayerConfig(input, cache, true);
         InputAudioScanner scanner = new InputAudioScanner(new SoundIdMapper(new FilenameSanitizer()), new HashService());
         JsonCacheIndexRepository repo = new JsonCacheIndexRepository(cache.resolve("index.json"));
-        FakeConversionService conversion = new FakeConversionService(true);
+        AtomicInteger durationCallCount = new AtomicInteger();
         AudiolayerManager manager = new AudiolayerManager(
-                config, scanner, repo, new AudioRegistryService(), conversion,
-                new com.audiolayer.resource.RuntimeResourcePackWriter(cache.resolve("pack"))
+                config, scanner, repo,
+                path -> { durationCallCount.incrementAndGet(); return 120f; }
         );
 
-        // first reload — conversion runs, asset loaded
+        // first reload — duration read runs, asset loaded
         var s1 = manager.reload();
         TestAssertions.assertEquals(1, s1.loadedAssets());
         TestAssertions.assertEquals(0, s1.reusedAssets());
         SoundId id = new SoundId("audiolayer", "track");
         TestAssertions.assertTrue(manager.isLoaded(id));
+        int callsAfterFirst = durationCallCount.get();
+        TestAssertions.assertEquals(1, callsAfterFirst);
 
-        // second reload — cache index hit, file exists → reused, no reconversion
-        int callsBefore = conversion.callCount();
+        // second reload — cache index hit → duration reused, no re-read
         var s2 = manager.reload();
         TestAssertions.assertEquals(1, s2.reusedAssets());
         TestAssertions.assertEquals(0, s2.failedFiles());
-        TestAssertions.assertEquals(callsBefore, conversion.callCount());
-
-        // delete the cache file — should force reconversion even though index has it
-        Files.delete(manager.get(id).orElseThrow().cacheFile());
-        var s3 = manager.reload();
-        TestAssertions.assertEquals(1, s3.loadedAssets());
-        TestAssertions.assertEquals(0, s3.reusedAssets());
-        TestAssertions.assertTrue(conversion.callCount() > callsBefore);
+        TestAssertions.assertEquals(callsAfterFirst, durationCallCount.get());
     }
 }
