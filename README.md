@@ -1,6 +1,6 @@
 # Audiolayer
 
-Audiolayer is a NeoForge 1.21.1 mod that loads MP3 files from a folder, converts them to OGG, and exposes them as playable Minecraft sound assets under the `audiolayer` namespace.
+Audiolayer is a NeoForge 1.21.1 mod that streams MP3 files directly from disk and plays them via OpenAL under the `audiolayer` namespace. No conversion, no resource pack — just drop in an MP3 and play it.
 
 ## Table of Contents
 
@@ -9,7 +9,6 @@ Audiolayer is a NeoForge 1.21.1 mod that loads MP3 files from a folder, converts
 - [Sound IDs](#sound-ids)
 - [In-Game Commands](#in-game-commands)
 - [Server Support](#server-support)
-- [Resource Pack](#resource-pack)
 - [Mod Integration API](#mod-integration-api)
 - [Folder Layout](#folder-layout)
 - [Development](#development)
@@ -19,8 +18,8 @@ Audiolayer is a NeoForge 1.21.1 mod that loads MP3 files from a folder, converts
 ## Installation
 
 1. Install NeoForge 1.21.1.
-2. Drop `audiolayer-0.1.0.jar` into your `mods/` folder.
-3. Start Minecraft once — the mod creates the input folder automatically.
+2. Drop `audiolayer-neoforge-<version>.jar` into your `mods/` folder.
+3. Start Minecraft — the mod creates the input folder and extracts a sample MP3 automatically.
 
 ---
 
@@ -45,7 +44,7 @@ config/audiolayer/input/
     confirm.mp3
 ```
 
-Restart Minecraft or run `/audiolayer reload` to pick up changes.
+Run `/audiolayer reload` to pick up changes without restarting.
 
 ---
 
@@ -55,6 +54,7 @@ Each file is mapped to a `namespace:path` ID:
 
 | File path (relative to input/) | Sound ID |
 |---|---|
+| `sample.mp3` | `audiolayer:sample` |
 | `music/theme.mp3` | `audiolayer:music.theme` |
 | `ambience/cave_loop.mp3` | `audiolayer:ambience.cave_loop` |
 | `ui/confirm.mp3` | `audiolayer:ui.confirm` |
@@ -69,7 +69,7 @@ Rules:
 
 ## In-Game Commands
 
-All commands are available to OPs on a server and to any player in singleplayer.
+All commands require OP level 2 on a server. In singleplayer they are available to all players.
 
 ### List loaded sounds
 
@@ -87,14 +87,14 @@ All commands are available to OPs on a server and to any player in singleplayer.
 |---|---|---|---|
 | `sound_id` | ResourceLocation | — | Sound to play (tab-complete supported) |
 | `count` | integer ≥ 0 | `1` | Number of repetitions. `0` = infinite loop |
-| `start` | float ≥ 0 | `0` | Start position in seconds. `0` = beginning |
+| `start` | float ≥ 0 | `0` | Start position in seconds |
 | `duration` | float ≥ 0 | `0` | Duration per repetition in seconds. `0` = until end of file |
 
 Examples:
 
 ```
-# Play once from the beginning
-/audiolayer play audiolayer:music.theme
+# Play the built-in sample once
+/audiolayer play audiolayer:sample
 
 # Play 3 times
 /audiolayer play audiolayer:music.theme 3
@@ -118,30 +118,17 @@ Examples:
 /audiolayer reload
 ```
 
-Rescans the input folder and rebuilds the cache. Already-cached files are reused unless their content changed.
+Rescans the input folder and updates the duration cache. Already-known files are reused.
 
 ---
 
 ## Server Support
 
-Audiolayer commands work on a multiplayer server. The server sends network packets to the client that issued the command — the sound plays on the client only, using the client's local file cache.
+Audiolayer commands work on a multiplayer server. The server sends a network packet to the client that issued the command — the sound plays on that client only.
 
-**Requirement:** every player who wants to hear Audiolayer sounds must have the mod installed with the same audio files in their `config/audiolayer/input/` folder (or a modpack that ships those files).
+**Requirement:** every player who wants to hear Audiolayer sounds must have the mod installed with the same MP3 files in their `config/audiolayer/input/` folder (or a modpack that ships those files).
 
 The server itself never plays audio; it only routes commands to the right client.
-
----
-
-## Resource Pack
-
-On first run the mod writes a runtime resource pack to:
-
-```
-resourcepacks/audiolayer-runtime/
-```
-
-The pack is registered automatically — no manual activation is needed.  
-If sounds are not playing, open **Options → Resource Packs** and ensure **Audiolayer Runtime** is active, then click **Done** to reload resources.
 
 ---
 
@@ -185,13 +172,10 @@ public interface AudiolayerApi {
     /** All currently loaded sound IDs. */
     Set<SoundId> listSounds();
 
-    /**
-     * Returns the loaded asset, which exposes the path to the converted OGG file.
-     * Other mods can use this path for their own playback pipeline.
-     */
+    /** Returns metadata for the sound (source path, hash, duration). */
     Optional<LoadedAudioAsset> get(SoundId id);
 
-    /** Rescans the input folder and rebuilds the runtime resource pack. */
+    /** Rescans the input folder and updates the cache. */
     void reload();
 
     /** Plays the sound once from the beginning. */
@@ -217,10 +201,6 @@ public interface AudiolayerApi {
 // Construct
 SoundId id = new SoundId("audiolayer", "music.theme");
 
-// From a string
-String[] parts = "audiolayer:music.theme".split(":", 2);
-SoundId id = new SoundId(parts[0], parts[1]);
-
 // To string
 id.toString(); // "audiolayer:music.theme"
 ```
@@ -229,9 +209,8 @@ id.toString(); // "audiolayer:music.theme"
 
 ```java
 api.get(id).ifPresent(asset -> {
-    Path oggFile = asset.cacheFile();   // path to the converted OGG
+    Path mp3 = asset.sourceFile();     // original MP3 path
     float duration = asset.durationSeconds();
-    // hand off oggFile to your own audio pipeline
 });
 ```
 
@@ -255,19 +234,9 @@ AudiolayerProvider.get().ifPresent(api -> {
 ```
 config/
   audiolayer/
-    input/          ← place your audio files here
+    input/        ← place your MP3 files here (sample.mp3 is extracted on first run)
     cache/
-      index.json    ← tracks which files have been converted
-      *.ogg         ← converted audio (reused across restarts)
-
-resourcepacks/
-  audiolayer-runtime/   ← generated runtime resource pack (do not edit)
-    pack.mcmeta
-    assets/
-      audiolayer/
-        sounds.json
-        sounds/
-          *.ogg
+      index.json  ← tracks file hashes and durations across restarts
 ```
 
 ---
@@ -285,4 +254,4 @@ npm run build
 ./gradlew runClient
 ```
 
-**Stack:** NeoForge 1.21.1 · Minecraft 1.21.1 · Java 21 · JAVE2 3.4.0 (bundled ffmpeg for audio conversion)
+**Stack:** NeoForge 1.21.1 · Minecraft 1.21.1 · Java 21 · JLayer 1.0.1 (MP3 streaming)
