@@ -1,13 +1,22 @@
-import { mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import { join } from 'node:path';
 
 const outDir = 'out';
 const classesDir = `${outDir}/classes`;
 const jacocoExec = `${outDir}/jacoco.exec`;
+const toolsDir = `${outDir}/tools`;
+const reportDir = 'build/reports/jacoco/html';
+const jacocoVersion = '0.8.12';
+const jacocoAgentJar = `${toolsDir}/jacocoagent.jar`;
+const jacocoCliJar = `${toolsDir}/jacococli.jar`;
+const mode = process.argv[2] ?? 'test';
 
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(classesDir, { recursive: true });
+mkdirSync(toolsDir, { recursive: true });
 
 const MINECRAFT_DEPENDENT = [
   'AudiolayerMod.java',
@@ -31,11 +40,26 @@ if (mainSources.length === 0 && testSources.length === 0) {
   process.exit(0);
 }
 
-const jacocoAgent = execFileSync(process.platform === 'win32' ? 'gradlew.bat' : './gradlew', ['--quiet', 'printJacocoAgentPath'], { encoding: 'utf8' }).trim();
+await ensureDownloaded(
+  `https://repo.maven.apache.org/maven2/org/jacoco/org.jacoco.agent/${jacocoVersion}/org.jacoco.agent-${jacocoVersion}-runtime.jar`,
+  jacocoAgentJar,
+);
+await ensureDownloaded(
+  `https://repo.maven.apache.org/maven2/org/jacoco/org.jacoco.cli/${jacocoVersion}/org.jacoco.cli-${jacocoVersion}-nodeps.jar`,
+  jacocoCliJar,
+);
 
 execFileSync('javac', ['-d', classesDir, ...mainSources, ...testSources], { stdio: 'inherit' });
-execFileSync('java', [`-javaagent:${jacocoAgent}=destfile=${jacocoExec},append=false`, '-ea', '-cp', classesDir, 'com.audiolayer.testsupport.TestRunner'], { stdio: 'inherit' });
-execFileSync(process.platform === 'win32' ? 'gradlew.bat' : './gradlew', ['coverageVerification'], { stdio: 'inherit' });
+if (mode === 'test') {
+  execFileSync('java', ['-ea', '-cp', classesDir, 'com.audiolayer.testsupport.TestRunner'], { stdio: 'inherit' });
+} else if (mode === 'coverage') {
+  execFileSync('java', [`-javaagent:${jacocoAgentJar}=destfile=${jacocoExec},append=false`, '-ea', '-cp', classesDir, 'com.audiolayer.testsupport.TestRunner'], { stdio: 'inherit' });
+  mkdirSync(reportDir, { recursive: true });
+  execFileSync('java', ['-jar', jacocoCliJar, 'report', jacocoExec, '--classfiles', classesDir, '--sourcefiles', 'src/main/java', '--html', reportDir, '--xml', `${outDir}/jacoco.xml`], { stdio: 'inherit' });
+  verifyCoverage(`${outDir}/jacoco.xml`, 0.80);
+} else {
+  throw new Error(`Unknown mode: ${mode}`);
+}
 
 function listJava(root) {
   const result = [];
@@ -49,4 +73,36 @@ function listJava(root) {
   }
   try { walk(root); } catch { /* directory does not exist */ }
   return result;
+}
+
+async function ensureDownloaded(url, destination) {
+  try {
+    statSync(destination);
+    return;
+  } catch {
+    // download below
+  }
+
+  const response = await fetch(url);
+  if (!response.ok || !response.body) {
+    throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);
+  }
+
+  const fileStream = createWriteStream(destination);
+  await pipeline(response.body, fileStream);
+}
+
+function verifyCoverage(xmlPath, minimumRatio) {
+  const xml = readFileSync(xmlPath, 'utf8');
+  const match = xml.match(/<counter type="LINE" missed="(\d+)" covered="(\d+)"\/>/);
+  if (!match) {
+    throw new Error('Could not determine line coverage from JaCoCo report.');
+  }
+
+  const missed = Number(match[1]);
+  const covered = Number(match[2]);
+  const ratio = covered / (covered + missed);
+  if (ratio < minimumRatio) {
+    throw new Error(`Line coverage ${Math.round(ratio * 1000) / 10}% is below required ${(minimumRatio * 100)}%.`);
+  }
 }

@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('out',{recursive:true,force:true})\"",
-    "test": "node scripts/test.mjs",
+    "test": "node scripts/test.mjs test",
+    "coverage": "node scripts/test.mjs coverage",
     "build": "node scripts/build.mjs",
     "start": "node scripts/start.mjs",
     "run:client": "gradle runClient"
