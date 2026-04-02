@@ -25,6 +25,11 @@ const MINECRAFT_DEPENDENT = [
 const mainSources = listJava('src/main/java').filter((file) => !MINECRAFT_DEPENDENT.some((name) => file.endsWith(name)));
 const testSources = listJava('src/test/java');
 
+if (mainSources.length === 0 && testSources.length === 0) {
+  console.log('No Java sources found, skipping tests.');
+  process.exit(0);
+}
+
 execFileSync('javac', ['-d', classesDir, ...mainSources, ...testSources], { stdio: 'inherit' });
 execFileSync('java', ['-ea', '-cp', classesDir, 'com.audiolayer.testsupport.TestRunner'], { stdio: 'inherit' });
 
@@ -38,6 +43,6 @@ function listJava(root) {
       else if (full.endsWith('.java')) result.push(full);
     }
   }
-  walk(root);
+  try { walk(root); } catch { /* directory does not exist */ }
   return result;
 }
