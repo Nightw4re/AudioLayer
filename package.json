@@ -1,0 +1,12 @@
+{
+  "name": "audiolayer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('out',{recursive:true,force:true})\"",
+    "test": "node scripts/test.mjs",
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/start.mjs",
+    "run:client": "gradle runClient"
+  }
+}

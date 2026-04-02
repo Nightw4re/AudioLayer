@@ -1,0 +1,34 @@
+# Node
+node_modules/
+package-lock.json
+
+# Java / IDE
+out/
+build/
+target/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# Gradle
+.gradle/
+local.properties
+
+# NeoForge / Minecraft dev
+runs/
+run/
+
+# AudioBridge runtime data (user-specific, not part of the mod)
+config/audiobridge/
+resourcepacks/audiobridge-runtime/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
