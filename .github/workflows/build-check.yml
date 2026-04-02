@@ -24,5 +24,5 @@ jobs:
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v4
         with:
           name: audiolayer-${{ github.sha }}
-          path: build/libs/audiolayer-[0-9]*.jar
+          path: build/libs/audiolayer-*.jar
           if-no-files-found: error

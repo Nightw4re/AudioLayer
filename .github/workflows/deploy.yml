@@ -58,7 +58,7 @@ jobs:
           tag_name: v${{ steps.version_check.outputs.current }}
           name: Audiolayer v${{ steps.version_check.outputs.current }}
           body: ${{ steps.changelog.outputs.content }}
-          files: build/libs/audiolayer-[0-9]*.jar
+          files: build/libs/audiolayer-${{ steps.version_check.outputs.current }}.jar
 
       - name: Publish to CurseForge
         if: steps.version_check.outputs.changed == 'true'
@@ -67,7 +67,7 @@ jobs:
           curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
 
-          files: build/libs/audiolayer-[0-9]*.jar
+          files: build/libs/audiolayer-${{ steps.version_check.outputs.current }}.jar
           name: Audiolayer v${{ steps.version_check.outputs.current }}
           version: ${{ steps.version_check.outputs.current }}
           version-type: release
