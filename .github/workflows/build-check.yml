@@ -19,6 +19,17 @@ jobs:
         with:
           java-version: 21
           distribution: temurin
+          cache: gradle
+
+      - name: Cache Gradle home
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', '**/*.gradle', 'gradle.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
       - name: Build
         run: gradle build --no-daemon

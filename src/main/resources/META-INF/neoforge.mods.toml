@@ -10,3 +10,10 @@ authors="Nightware"
 description='''
 Play custom MP3 files in-game via server commands. Supports looping, seeking and finite playback durations.
 '''
+
+[[dependencies.${mod_id}]]
+    modId="kubejs"
+    type="optional"
+    versionRange="[2101,)"
+    ordering="NONE"
+    side="CLIENT"

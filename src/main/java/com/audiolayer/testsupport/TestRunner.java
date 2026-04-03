@@ -18,7 +18,8 @@ public final class TestRunner {
             "com.audiolayer.registry.AudioRegistryServiceTest",
             "com.audiolayer.registry.AudiolayerManagerTest",
             "com.audiolayer.registry.AudiolayerManagerCacheTest",
-            "com.audiolayer.resource.RuntimeResourcePackWriterTest"
+            "com.audiolayer.resource.RuntimeResourcePackWriterTest",
+            "com.audiolayer.kubejs.AudiolayerJSWrapperTest"
     };
 
     public static void main(String[] args) throws Exception {
