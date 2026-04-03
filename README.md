@@ -133,6 +133,14 @@ The server itself never plays audio; it only routes commands to the right client
 
 ---
 
+## Copyright Notice
+
+Audiolayer is a playback tool and does not provide audio rights clearance or licenses.
+
+Modpack authors, mod authors, and end users are responsible for making sure they have the legal rights to any audio files they use, bundle, or distribute with Audiolayer.
+
+---
+
 ## Mod Integration API
 
 Other mods can interact with Audiolayer through a stable Java API without depending on internal classes.
