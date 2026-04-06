@@ -19,6 +19,19 @@ sourceSets.main.resources {
 }
 
 repositories {
+    maven {
+        name = "KubeJS"
+        url = "https://maven.latvian.dev/releases"
+        content {
+            includeGroup "dev.latvian.mods"
+            includeGroup "dev.latvian.apps"
+        }
+    }
+    maven {
+        name = "JitPack"
+        url = "https://jitpack.io"
+        content { includeGroup "com.github.rtyley" }
+    }
 }
 
 base {
@@ -66,6 +79,9 @@ configurations {
 dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
 
+    compileOnly "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
+    localRuntime "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
+
     implementation 'javazoom:jlayer:1.0.1'
     localRuntime 'javazoom:jlayer:1.0.1'
     jarJar('javazoom:jlayer:[1.0.1,2.0)') { jarJar.ranged(it, '[1.0.1,2.0)') }
@@ -107,7 +123,6 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.named('test', Test).configure {
     jvmArgs '-ea'
-    failOnNoDiscoveredTests = false
 }
 
 jacoco {

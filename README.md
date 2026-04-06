@@ -10,6 +10,7 @@ Audiolayer is a NeoForge 1.21.1 mod that streams MP3 files directly from disk an
 - [In-Game Commands](#in-game-commands)
 - [Server Support](#server-support)
 - [Mod Integration API](#mod-integration-api)
+- [KubeJS Integration](#kubejs-integration)
 - [Folder Layout](#folder-layout)
 - [Development](#development)
 
@@ -132,6 +133,14 @@ The server itself never plays audio; it only routes commands to the right client
 
 ---
 
+## Copyright Notice
+
+Audiolayer is a playback tool and does not provide audio rights clearance or licenses.
+
+Modpack authors, mod authors, and end users are responsible for making sure they have the legal rights to any audio files they use, bundle, or distribute with Audiolayer.
+
+---
+
 ## Mod Integration API
 
 Other mods can interact with Audiolayer through a stable Java API without depending on internal classes.
@@ -229,6 +238,82 @@ AudiolayerProvider.get().ifPresent(api -> {
 
 ---
 
+## KubeJS Integration
+
+Audiolayer ships a built-in [KubeJS](https://kubejs.com/) plugin. When KubeJS 2101+ is present, a global `Audiolayer` binding is available in all client scripts — no extra setup required.
+
+### Requirements
+
+| Mod | Version |
+|---|---|
+| Audiolayer | 0.3.7+ |
+| KubeJS NeoForge | 2101+ (1.21.1) |
+
+### Global binding: `Audiolayer`
+
+```js
+// Play a sound once
+Audiolayer.play("audiolayer:music.theme")
+
+// Play with full control: play(soundId, count, startSeconds, durationSeconds)
+//   count = 0  → infinite loop
+//   start > 0  → seek to position
+//   duration > 0 → limit each repetition length
+Audiolayer.play("audiolayer:music.theme", 3, 0, 0)       // 3 repetitions
+Audiolayer.play("audiolayer:music.theme", 0, 10, 0)      // infinite loop from 10 s
+Audiolayer.play("audiolayer:music.theme", 2, 5, 30)      // twice, 30 s each, starting at 5 s
+
+// Stop whatever is currently playing
+Audiolayer.stop()
+
+// Check if a sound is loaded
+if (Audiolayer.isLoaded("audiolayer:music.theme")) {
+    Audiolayer.play("audiolayer:music.theme")
+}
+
+// List all loaded sounds (returns a sorted array of strings)
+let sounds = Audiolayer.listSounds()
+console.log(sounds) // ["audiolayer:ambience.cave", "audiolayer:music.theme", ...]
+
+// Rescan the input folder at runtime
+Audiolayer.reload()
+```
+
+### Example: play music when a player joins
+
+```js
+// kubejs/client_scripts/audio.js
+PlayerEvents.loggedIn(event => {
+    if (Audiolayer.isLoaded("audiolayer:music.theme")) {
+        Audiolayer.play("audiolayer:music.theme", 0, 0, 0) // loop forever
+    }
+})
+```
+
+### Example: stop music on death
+
+```js
+// kubejs/client_scripts/audio.js
+PlayerEvents.respawned(event => {
+    Audiolayer.stop()
+})
+```
+
+### Example: play a stinger then stop
+
+```js
+// kubejs/client_scripts/audio.js
+PlayerEvents.chat(event => {
+    if (event.message === "!boss") {
+        Audiolayer.play("audiolayer:music.boss_fight", 1, 0, 0)
+    }
+})
+```
+
+> **Note:** All `Audiolayer` calls must run in a **client** script (`kubejs/client_scripts/`). The global is not available in server scripts because audio playback is client-side only. Methods are silent no-ops if Audiolayer is not loaded or the sound is not found.
+
+---
+
 ## Folder Layout
 
 ```
@@ -247,10 +332,16 @@ config/
 # Run unit tests (no Minecraft required)
 npm test
 
+# Run tests with coverage report
+npm run coverage
+
+# Verify KubeJS dependency resolves (useful in CI)
+npm run prepare:kubejs
+
 # Build the mod jar
 npm run build
 
-# Start NeoForge client in dev
+# Start NeoForge client in dev (with KubeJS if present in mods/)
 ./gradlew runClient
 ```
 

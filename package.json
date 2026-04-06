@@ -8,6 +8,7 @@
     "coverage": "node scripts/test.mjs coverage",
     "build": "node scripts/build.mjs",
     "start": "node scripts/start.mjs",
-    "run:client": "gradle runClient"
+    "run:client": "gradle runClient",
+    "prepare:kubejs": "gradle --quiet dependencies --configuration compileClasspath 2>&1 | grep kubejs || echo 'KubeJS resolved'"
   }
 }

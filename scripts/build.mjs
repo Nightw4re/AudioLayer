@@ -11,7 +11,25 @@ rmSync(outDir, { recursive: true, force: true });
 mkdirSync(classesDir, { recursive: true });
 mkdirSync(distDir, { recursive: true });
 
-const mainSources = listJava('src/main/java').filter((file) => !file.endsWith('AudiolayerMod.java') && !file.endsWith('AudiolayerCommands.java'));
+const MINECRAFT_DEPENDENT = [
+  'AudiolayerMod.java',
+  'AudiolayerClientSetup.java',
+  'AudiolayerCommands.java',
+  'AudiolayerServerCommands.java',
+  'AudiolayerClientHandler.java',
+  'AudiolayerPlayPacket.java',
+  'AudiolayerStopPacket.java',
+  'ClientAudiolayerApi.java',
+  'AudiolayerSoundInstance.java',
+  'SoundSeekUtil.java',
+  'Mp3SoundInstance.java',
+  'Mp3StreamDecoder.java',
+  'Jave2AudioConversionService.java',
+  'OggVorbisEncoder.java',
+  'ExternalFfmpegAudioConversionService.java',
+  'AudiolayerKubePlugin.java',
+];
+const mainSources = listJava('src/main/java').filter((file) => !MINECRAFT_DEPENDENT.some((name) => file.endsWith(name)));
 execFileSync('javac', ['-d', classesDir, ...mainSources], { stdio: 'inherit' });
 
 const manifestPath = `${outDir}/MANIFEST.MF`;

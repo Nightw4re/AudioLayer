@@ -7,7 +7,7 @@ import { join } from 'node:path';
 const outDir = 'out';
 const classesDir = `${outDir}/classes`;
 const jacocoExec = `${outDir}/jacoco.exec`;
-const toolsDir = `${outDir}/tools`;
+const toolsDir = '.cache/jacoco-tools';
 const reportDir = 'build/reports/jacoco/html';
 const jacocoVersion = '0.8.12';
 const jacocoAgentJar = `${toolsDir}/jacocoagent.jar`;
@@ -34,6 +34,7 @@ const MINECRAFT_DEPENDENT = [
   'Jave2AudioConversionService.java',
   'OggVorbisEncoder.java',
   'ExternalFfmpegAudioConversionService.java',
+  'AudiolayerKubePlugin.java',
 ];
 const mainSources = listJava('src/main/java').filter((file) => !MINECRAFT_DEPENDENT.some((name) => file.endsWith(name)));
 const testSources = listJava('src/test/java');

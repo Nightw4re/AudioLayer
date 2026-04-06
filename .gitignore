@@ -2,6 +2,9 @@
 node_modules/
 package-lock.json
 
+# Local tool cache (JaCoCo jars etc.)
+.cache/
+
 # Java / IDE
 out/
 build/
