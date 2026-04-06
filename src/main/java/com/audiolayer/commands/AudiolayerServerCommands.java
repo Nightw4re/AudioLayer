@@ -6,16 +6,23 @@ import com.audiolayer.network.AudiolayerStopPacket;
 import com.audiolayer.registry.AudiolayerManager;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.nio.file.Files;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -56,6 +63,66 @@ public final class AudiolayerServerCommands {
                                     context.getSource().sendSuccess(() -> Component.literal("Playback stopped"), false);
                                     return 1;
                                 }))
+                        .then(Commands.literal("debug")
+                                .then(Commands.argument("sound_id", StringArgumentType.greedyString())
+                                        .suggests(this::suggestSoundIds)
+                                        .executes(context -> {
+                                            String raw = StringArgumentType.getString(context, "sound_id");
+                                            SoundId id = AudiolayerCommandSupport.parseSoundId(raw);
+                                            return manager.get(id).map(asset -> {
+                                                boolean sourceExists = Files.exists(asset.sourceFile());
+                                                context.getSource().sendSuccess(() -> Component.literal(
+                                                        "id=" + asset.soundId()
+                                                                + " | source=" + (sourceExists ? "ok" : "missing")
+                                                                + " | duration=" + asset.durationSeconds() + "s"
+                                                                + " | path=" + asset.sourceFile()
+                                                ), false);
+                                                return 1;
+                                            }).orElseGet(() -> {
+                                                context.getSource().sendFailure(Component.literal("Unknown sound: " + raw));
+                                                return 0;
+                                            });
+                                        })))
+                        .then(Commands.literal("test")
+                                .then(Commands.literal("setup")
+                                        .executes(context -> {
+                                            var player = context.getSource().getPlayerOrException();
+                                            player.addItem(new ItemStack(Items.JUKEBOX));
+
+                                            var etchedBlankDisc = BuiltInRegistries.ITEM.getOptional(
+                                                    ResourceLocation.parse("etched:blank_music_disc")).orElse(null);
+                                            var etchedMusicLabel = BuiltInRegistries.ITEM.getOptional(
+                                                    ResourceLocation.parse("etched:music_label")).orElse(null);
+
+                                            if (etchedBlankDisc != null && etchedMusicLabel != null) {
+                                                player.addItem(new ItemStack(etchedBlankDisc));
+                                                player.addItem(new ItemStack(etchedMusicLabel));
+
+                                                var etchedDisc = BuiltInRegistries.ITEM.getOptional(
+                                                        ResourceLocation.parse("etched:etched_music_disc")).orElse(null);
+                                                var musicComponent = BuiltInRegistries.DATA_COMPONENT_TYPE.getOptional(
+                                                        ResourceLocation.parse("etched:music")).orElse(null);
+                                                if (etchedDisc != null && musicComponent != null) {
+                                                    manager.listSounds().stream().limit(3).forEach(id -> {
+                                                        var stack = new ItemStack(etchedDisc);
+                                                        stack.set(DataComponents.CUSTOM_NAME, Component.literal(id.path()));
+                                                        player.addItem(stack);
+                                                    });
+                                                }
+                                                context.getSource().sendSuccess(() -> Component.literal(
+                                                        "Given: jukebox, blank_music_disc, music_label" +
+                                                        (manager.listSounds().isEmpty() ? "" :
+                                                        " + " + Math.min(3, manager.listSounds().size()) + " pre-named etched disc(s). " +
+                                                        "Use Etching Table to etch the blank disc with sound: " +
+                                                        manager.listSounds().stream().findFirst().map(SoundId::toString).orElse(""))
+                                                ), false);
+                                            } else {
+                                                context.getSource().sendSuccess(() -> Component.literal(
+                                                        "Given: jukebox. Etched not loaded — use /audiolayer play <sound_id> to test directly."
+                                                ), false);
+                                            }
+                                            return 1;
+                                        })))
                         .then(Commands.literal("play")
                                 .then(Commands.argument("sound_id", ResourceLocationArgument.id())
                                         .suggests(this::suggestSoundIds)

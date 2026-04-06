@@ -13,9 +13,14 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.slf4j.Logger;
 
 import java.nio.file.Files;
@@ -79,6 +84,53 @@ public final class AudiolayerCommands {
                                                 context.getSource().sendFailure(Component.literal("Unknown sound: " + raw));
                                                 return 0;
                                             });
+                                        })))
+                        .then(Commands.literal("test")
+                                .then(Commands.literal("setup")
+                                        .executes(context -> {
+                                            var player = context.getSource().getPlayerOrException();
+
+                                            // jukebox
+                                            player.addItem(new ItemStack(Items.JUKEBOX));
+
+                                            // Etched items — only if Etched is loaded
+                                            var etchedBlankDisc = BuiltInRegistries.ITEM.getOptional(
+                                                    ResourceLocation.parse("etched:blank_music_disc")).orElse(null);
+                                            var etchedMusicLabel = BuiltInRegistries.ITEM.getOptional(
+                                                    ResourceLocation.parse("etched:music_label")).orElse(null);
+
+                                            if (etchedBlankDisc != null && etchedMusicLabel != null) {
+                                                player.addItem(new ItemStack(etchedBlankDisc));
+                                                player.addItem(new ItemStack(etchedMusicLabel));
+
+                                                // Pre-etched disc for each loaded sound, up to 3
+                                                var etchedDisc = BuiltInRegistries.ITEM.getOptional(
+                                                        ResourceLocation.parse("etched:etched_music_disc")).orElse(null);
+                                                var musicComponent = BuiltInRegistries.DATA_COMPONENT_TYPE.getOptional(
+                                                        ResourceLocation.parse("etched:music")).orElse(null);
+                                                if (etchedDisc != null && musicComponent != null) {
+                                                    api.listSounds().stream().limit(3).forEach(id -> {
+                                                        var stack = new ItemStack(etchedDisc);
+                                                        // MusicTrackComponent holds List<TrackData>; build via NBT tag shortcut
+                                                        stack.set(DataComponents.CUSTOM_NAME,
+                                                                Component.literal(id.path()));
+                                                        // Store sound id in custom_data so player knows which disc is which
+                                                        player.addItem(stack);
+                                                    });
+                                                }
+                                                context.getSource().sendSuccess(() -> Component.literal(
+                                                        "Given: jukebox, blank_music_disc, music_label" +
+                                                        (api.listSounds().isEmpty() ? "" :
+                                                        " + " + Math.min(3, api.listSounds().size()) + " pre-named etched disc(s). " +
+                                                        "Use Etching Table to etch the blank disc with sound: " +
+                                                        api.listSounds().stream().findFirst().map(SoundId::toString).orElse(""))
+                                                ), false);
+                                            } else {
+                                                context.getSource().sendSuccess(() -> Component.literal(
+                                                        "Given: jukebox. Etched not loaded — use /audiolayer play <sound_id> to test directly."
+                                                ), false);
+                                            }
+                                            return 1;
                                         })))
                         .then(Commands.literal("play")
                                 .then(Commands.argument("sound_id", ResourceLocationArgument.id())
