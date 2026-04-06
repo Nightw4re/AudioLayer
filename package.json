@@ -7,8 +7,11 @@
     "test": "node scripts/test.mjs test",
     "coverage": "node scripts/test.mjs coverage",
     "build": "node scripts/build.mjs",
-    "start": "node scripts/start.mjs",
-    "run:client": "gradle runClient",
-    "prepare:kubejs": "gradle --quiet dependencies --configuration compileClasspath 2>&1 | grep kubejs || echo 'KubeJS resolved'"
+    "run:client": "gradlew runClient",
+    "run:server": "gradlew runServer",
+    "run:data": "gradlew runData",
+    "run:gametest": "gradlew runGameTestServer",
+    "compat:etched": "gradlew runCompatEtched",
+    "prepare:kubejs": "gradlew --quiet dependencies --configuration compileClasspath 2>&1 | grep kubejs || echo 'KubeJS resolved'"
   }
 }

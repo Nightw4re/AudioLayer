@@ -11,6 +11,7 @@ Audiolayer is a NeoForge 1.21.1 mod that streams MP3 files directly from disk an
 - [Server Support](#server-support)
 - [Mod Integration API](#mod-integration-api)
 - [KubeJS Integration](#kubejs-integration)
+- [Compatible Mods](#compatible-mods)
 - [Folder Layout](#folder-layout)
 - [Development](#development)
 
@@ -311,6 +312,31 @@ PlayerEvents.chat(event => {
 ```
 
 > **Note:** All `Audiolayer` calls must run in a **client** script (`kubejs/client_scripts/`). The global is not available in server scripts because audio playback is client-side only. Methods are silent no-ops if Audiolayer is not loaded or the sound is not found.
+
+---
+
+## Compatible Mods
+
+These mods work alongside Audiolayer and can use MP3 playback via the Audiolayer API or through the Etched jukebox integration.
+
+### [Etched](https://modrinth.com/mod/etched) (5.0.1+)
+
+Set any `audiolayer:<sound_id>` string as the URL/sound event on an Etched Music Disc. Inserting the disc into a jukebox triggers the Audiolayer hook and plays the MP3. Removing the disc stops playback.
+
+**How to set up:**
+1. Place MP3 files in `config/audiolayer/input/` and run `/audiolayer reload`.
+2. At an Etching Table, set the disc URL to `audiolayer:sample` (or any loaded sound ID).
+3. Insert the etched disc into a jukebox — the MP3 plays automatically.
+
+> Use `/audiolayer list` to see all loaded sound IDs.
+
+### [KubeJS](https://kubejs.com/) (2101+ for 1.21.1)
+
+Control playback from scripts via the built-in `Audiolayer` global. See the [KubeJS Integration](#kubejs-integration) section for the full API.
+
+### [AmbientSounds](https://modrinth.com/mod/ambientsounds), [Reactive Music](https://modrinth.com/mod/reactive), [Ambient Environment](https://modrinth.com/mod/ambient-environment), [Euphonium](https://modrinth.com/mod/euphonium)
+
+These mods manage when music plays (biome-based, event-based, etc.). Use the [Audiolayer API](#mod-integration-api) in a companion mod or KubeJS script to substitute MP3 playback at the points where they trigger sounds.
 
 ---
 

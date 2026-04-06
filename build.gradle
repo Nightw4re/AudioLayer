@@ -5,6 +5,8 @@ plugins {
     id 'jacoco'
 }
 
+import groovy.json.JsonSlurper
+
 tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
@@ -48,27 +50,114 @@ tasks.named('jarJar').configure {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
+// ---------------------------------------------------------------------------
+// Compat profiles — one entry per mod (or group) to test against Audiolayer.
+// Key   = profile name used in task/run names (camelCase)
+// Value = Modrinth slugs or project IDs to download
+// NOTE: vinurl omitted — its NeoForge jar contains Fabric dependencies (broken release)
+// ---------------------------------------------------------------------------
+// Only Etched is relevant — it uses MC sound events (audiolayer: namespace) which our hook intercepts.
+// DiscCord/VinURL have their own audio stack outside MC SoundEngine.
+// JukeboxSpeaker can't extend Audiolayer's direct OpenAL playback.
+// Created Music Discs uses minecraft: namespace — hook doesn't fire.
+def compatProfiles = [
+    etched: ['etched'],
+]
+
+// ---------------------------------------------------------------------------
+// Helper: resolve & download a list of slugs into a target directory
+// ---------------------------------------------------------------------------
+def downloadModsInto = { List<String> slugs, File modsDir, String mcVer ->
+    if (slugs.isEmpty()) return
+    def slurper = new JsonSlurper()
+    modsDir.mkdirs()
+    slugs.each { slug ->
+        def versionsUrl = new URL(
+            "https://api.modrinth.com/v2/project/${slug}/version" +
+            "?game_versions=%5B%22${mcVer}%22%5D" +
+            "&loaders=%5B%22neoforge%22%5D"
+        )
+        def versions = slurper.parse(versionsUrl)
+        if (!versions) {
+            println "[downloadMods] WARNING: no 1.21.1/neoforge version for '${slug}'"
+            return
+        }
+        def modFile = versions[0].files.find { it.primary } ?: versions[0].files[0]
+        def dest = new File(modsDir, modFile.filename)
+        if (!dest.exists()) {
+            println "[downloadMods] Downloading ${modFile.filename} -> ${modsDir}"
+            dest.bytes = new URL(modFile.url).bytes
+        } else {
+            println "[downloadMods] Already present: ${modFile.filename}"
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Per-profile download tasks
+// ---------------------------------------------------------------------------
+def mcVer = project.minecraft_version as String
+
+compatProfiles.each { profileName, slugs ->
+    def slugList         = slugs as List<String>
+    def modsDir          = project.file("runs/compat/${profileName}/mods")
+    def capturedMcVer    = mcVer
+    def downloadTaskName = "downloadMods_${profileName}"
+
+    tasks.register(downloadTaskName) {
+        group = 'compat runs'
+        description = "Downloads mods for compat profile '${profileName}'"
+        def capturedModsDir = modsDir
+        def capturedSlugs   = slugList
+        outputs.upToDateWhen {
+            capturedSlugs.every { slug -> capturedModsDir.listFiles()?.any { it.name.startsWith(slug) } }
+        }
+        doLast { downloadModsInto(capturedSlugs, capturedModsDir, capturedMcVer) }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// All runs — standard + compat (must be inside a single runs {} block)
+// NeoGradle infers run type from name prefix: clientXxx → client type
+// ---------------------------------------------------------------------------
 runs {
     configureEach {
         systemProperty 'forge.logging.markers', 'REGISTRIES'
         systemProperty 'forge.logging.console.level', 'debug'
         modSource project.sourceSets.main
-        dependencies {
-            runtime 'javazoom:jlayer:1.0.1'
-        }
     }
+
+    // Standard runs
     client {
         systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        dependencies { runtime 'javazoom:jlayer:1.0.1' }
     }
     server {
         systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         argument '--nogui'
+        dependencies { runtime 'javazoom:jlayer:1.0.1' }
     }
     gameTestServer {
         systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        dependencies { runtime 'javazoom:jlayer:1.0.1' }
     }
     data {
         arguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+    }
+
+    // Etched bundles jlayer via JiJ — skip localRuntime jlayer to avoid duplicate named module
+    compatEtched {
+        runType 'client'
+        workingDirectory project.file('runs/compat/etched')
+    }
+}
+
+// Wire download tasks to their run tasks — use afterEvaluate so NeoGradle has registered them
+afterEvaluate {
+    compatProfiles.each { profileName, slugs ->
+        def runTaskName      = "runCompat${profileName.capitalize()}"
+        def downloadTaskName = "downloadMods_${profileName}"
+        tasks.named(runTaskName).configure { dependsOn downloadTaskName }
     }
 }
 
@@ -83,7 +172,6 @@ dependencies {
     localRuntime "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
 
     implementation 'javazoom:jlayer:1.0.1'
-    localRuntime 'javazoom:jlayer:1.0.1'
     jarJar('javazoom:jlayer:[1.0.1,2.0)') { jarJar.ranged(it, '[1.0.1,2.0)') }
 }
 
