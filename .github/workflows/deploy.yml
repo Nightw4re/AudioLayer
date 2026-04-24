@@ -78,3 +78,19 @@ jobs:
           loaders: neoforge
           game-versions: 1.21.1
           java: 21
+
+      - name: Publish to Modrinth
+        if: steps.version_check.outputs.changed == 'true'
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+
+          files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}.jar
+          name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}
+          version: ${{ steps.version_check.outputs.current }}
+          version-type: release
+          changelog: ${{ steps.changelog.outputs.content }}
+          loaders: neoforge
+          game-versions: 1.21.1
+          java: 21
