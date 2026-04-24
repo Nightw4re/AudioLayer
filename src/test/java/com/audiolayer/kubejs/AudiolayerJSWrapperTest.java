@@ -20,7 +20,9 @@ public final class AudiolayerJSWrapperTest {
 
         testPlay_simple_dispatchesToApi();
         testPlay_full_dispatchesToApi();
+        testPlay_mixer_dispatchesToApi();
         testStop_dispatchesToApi();
+        testStop_category_dispatchesToApi();
         testIsLoaded_returnsApiValue();
         testListSounds_returnsSortedStrings();
         testReload_dispatchesToApi();
@@ -73,11 +75,28 @@ public final class AudiolayerJSWrapperTest {
         TestAssertions.assertEquals("audiolayer:music.theme|3|1.5|10.0", call);
     }
 
+    private static void testPlay_mixer_dispatchesToApi() {
+        StubApi stub = new StubApi();
+        AudiolayerJSWrapper wrapper = new AudiolayerJSWrapper(() -> Optional.of(stub));
+        wrapper.play("audiolayer:music.theme", 3, 1.5, 10.0, 0.75, 1.25, "music");
+        TestAssertions.assertEquals(1, stub.playMixerCalls.size());
+        String call = stub.playMixerCalls.get(0);
+        TestAssertions.assertEquals("audiolayer:music.theme|3|1.5|10.0|0.75|1.25|music", call);
+    }
+
     private static void testStop_dispatchesToApi() {
         StubApi stub = new StubApi();
         AudiolayerJSWrapper wrapper = new AudiolayerJSWrapper(() -> Optional.of(stub));
         wrapper.stop();
         TestAssertions.assertEquals(1, stub.stopCount);
+    }
+
+    private static void testStop_category_dispatchesToApi() {
+        StubApi stub = new StubApi();
+        AudiolayerJSWrapper wrapper = new AudiolayerJSWrapper(() -> Optional.of(stub));
+        wrapper.stop("music");
+        TestAssertions.assertEquals(1, stub.stopCategories.size());
+        TestAssertions.assertEquals("music", stub.stopCategories.get(0));
     }
 
     private static void testIsLoaded_returnsApiValue() {
@@ -137,8 +156,10 @@ public final class AudiolayerJSWrapperTest {
     private static final class StubApi implements AudiolayerApi {
         final List<String> playCalls = new ArrayList<>();
         final List<String> playFullCalls = new ArrayList<>();
+        final List<String> playMixerCalls = new ArrayList<>();
         int stopCount;
         int reloadCount;
+        final List<String> stopCategories = new ArrayList<>();
         SoundId loadedId;
         Set<SoundId> sounds = Set.of();
 
@@ -173,8 +194,18 @@ public final class AudiolayerJSWrapperTest {
         }
 
         @Override
+        public void play(SoundId id, int count, float startSeconds, float durationSeconds, float volume, float pitch, String category) {
+            playMixerCalls.add(id + "|" + count + "|" + startSeconds + "|" + durationSeconds + "|" + volume + "|" + pitch + "|" + category);
+        }
+
+        @Override
         public void stop() {
             stopCount++;
+        }
+
+        @Override
+        public void stop(String category) {
+            stopCategories.add(category);
         }
     }
 }

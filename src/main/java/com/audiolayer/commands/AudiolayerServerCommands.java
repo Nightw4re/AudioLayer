@@ -62,7 +62,15 @@ public final class AudiolayerServerCommands {
                                             new AudiolayerStopPacket());
                                     context.getSource().sendSuccess(() -> Component.literal("Playback stopped"), false);
                                     return 1;
-                                }))
+                                })
+                                .then(Commands.argument("category", StringArgumentType.word())
+                                        .executes(context -> {
+                                            String category = StringArgumentType.getString(context, "category");
+                                            PacketDistributor.sendToPlayer(context.getSource().getPlayerOrException(),
+                                                    new AudiolayerStopPacket(category));
+                                            context.getSource().sendSuccess(() -> Component.literal("Playback stopped: " + category), false);
+                                            return 1;
+                                        })))
                         .then(Commands.literal("debug")
                                 .then(Commands.argument("sound_id", StringArgumentType.greedyString())
                                         .suggests(this::suggestSoundIds)
@@ -142,11 +150,51 @@ public final class AudiolayerServerCommands {
                                                                         ResourceLocationArgument.getId(context, "sound_id").toString(),
                                                                         IntegerArgumentType.getInteger(context, "count"),
                                                                         FloatArgumentType.getFloat(context, "start"),
-                                                                        FloatArgumentType.getFloat(context, "duration"))))))))
+                                                                        FloatArgumentType.getFloat(context, "duration")))
+                                                                .then(Commands.argument("volume", FloatArgumentType.floatArg(0f))
+                                                                        .executes(context -> sendPlay(context.getSource(),
+                                                                                ResourceLocationArgument.getId(context, "sound_id").toString(),
+                                                                                IntegerArgumentType.getInteger(context, "count"),
+                                                                                FloatArgumentType.getFloat(context, "start"),
+                                                                                FloatArgumentType.getFloat(context, "duration"),
+                                                                                FloatArgumentType.getFloat(context, "volume"),
+                                                                                1f,
+                                                                                "master"))
+                                                                        .then(Commands.argument("pitch", FloatArgumentType.floatArg(0.01f))
+                                                                                .executes(context -> sendPlay(context.getSource(),
+                                                                                        ResourceLocationArgument.getId(context, "sound_id").toString(),
+                                                                                        IntegerArgumentType.getInteger(context, "count"),
+                                                                                        FloatArgumentType.getFloat(context, "start"),
+                                                                                        FloatArgumentType.getFloat(context, "duration"),
+                                                                                        FloatArgumentType.getFloat(context, "volume"),
+                                                                                        FloatArgumentType.getFloat(context, "pitch"),
+                                                                                        "master"))
+                                                                                .then(Commands.argument("category", StringArgumentType.word())
+                                                                                        .executes(context -> sendPlay(context.getSource(),
+                                                                                                ResourceLocationArgument.getId(context, "sound_id").toString(),
+                                                                                                IntegerArgumentType.getInteger(context, "count"),
+                                                                                                FloatArgumentType.getFloat(context, "start"),
+                                                                                                FloatArgumentType.getFloat(context, "duration"),
+                                                                                                FloatArgumentType.getFloat(context, "volume"),
+                                                                                                FloatArgumentType.getFloat(context, "pitch"),
+                                                                                                StringArgumentType.getString(context, "category")))))))))))
         );
     }
 
     private int sendPlay(net.minecraft.commands.CommandSourceStack source, String soundId, int count, float start, float duration) {
+        return sendPlay(source, soundId, count, start, duration, 1f, 1f, "master");
+    }
+
+    private int sendPlay(
+            net.minecraft.commands.CommandSourceStack source,
+            String soundId,
+            int count,
+            float start,
+            float duration,
+            float volume,
+            float pitch,
+            String category
+    ) {
         SoundId id = AudiolayerCommandSupport.parseSoundId(soundId);
         if (!manager.isLoaded(id)) {
             source.sendFailure(Component.literal("Unknown sound: " + soundId));
@@ -154,7 +202,7 @@ public final class AudiolayerServerCommands {
         }
         try {
             PacketDistributor.sendToPlayer(source.getPlayerOrException(),
-                    new AudiolayerPlayPacket(id, count, start, duration));
+                    new AudiolayerPlayPacket(id, count, start, duration, volume, pitch, category));
             String msg = AudiolayerCommandSupport.playMessage(id, count, start, duration);
             source.sendSuccess(() -> Component.literal(msg), false);
         } catch (Exception e) {

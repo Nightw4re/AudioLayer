@@ -66,11 +66,11 @@ public final class AudiolayerMod {
         manager.reload();
 
         modEventBus.addListener((RegisterPayloadHandlersEvent event) -> {
-            PayloadRegistrar reg = event.registrar("1");
+            PayloadRegistrar reg = event.registrar("2");
             reg.playToClient(AudiolayerPlayPacket.TYPE, AudiolayerPlayPacket.CODEC,
                     (pkt, ctx) -> ctx.enqueueWork(() -> AudiolayerClientHandler.onPlay(pkt)));
             reg.playToClient(AudiolayerStopPacket.TYPE, AudiolayerStopPacket.CODEC,
-                    (pkt, ctx) -> ctx.enqueueWork(() -> AudiolayerClientHandler.onStop()));
+                    (pkt, ctx) -> ctx.enqueueWork(() -> AudiolayerClientHandler.onStop(pkt)));
         });
 
         NeoForge.EVENT_BUS.register(new AudiolayerServerCommands(manager));

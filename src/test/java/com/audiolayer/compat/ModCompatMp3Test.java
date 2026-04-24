@@ -28,7 +28,7 @@ import java.util.Set;
  *
  * Integration pattern shared by all four mods:
  *   1. Call api.isLoaded(id) — guard before attempting playback
- *   2. Call api.get(id)      — obtain the converted OGG asset path for own audio pipeline
+ *   2. Call api.get(id)      — obtain the MP3 source path and metadata
  *   3. Call api.play(...)    — trigger playback via Audiolayer
  *   4. Call api.stop()       — stop on biome/event/UI change
  */
@@ -105,7 +105,7 @@ public final class ModCompatMp3Test {
         TestAssertions.assertEquals(0, api.playFullCalls.size());
     }
 
-    /** AmbientSounds can retrieve the OGG asset path for its own mixing pipeline. */
+    /** AmbientSounds can retrieve the MP3 source path for its own mixing pipeline. */
     private static void testAmbientSounds_getReturnsOggPath() throws Exception {
         AudiolayerManager manager = managerWithFile("ambient/cave.mp3");
         manager.reload();

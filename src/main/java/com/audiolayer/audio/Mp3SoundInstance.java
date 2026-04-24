@@ -27,6 +27,8 @@ public final class Mp3SoundInstance {
     private final int count;
     private final float startSeconds;
     private final float durationSeconds;
+    private final float volume;
+    private final float pitch;
 
     private final int alSource;
     private final int[] alBuffers;
@@ -41,14 +43,22 @@ public final class Mp3SoundInstance {
     private Future<?> streamTask;
 
     public Mp3SoundInstance(Path sourceFile, int count, float startSeconds, float durationSeconds) {
+        this(sourceFile, count, startSeconds, durationSeconds, 1f, 1f);
+    }
+
+    public Mp3SoundInstance(Path sourceFile, int count, float startSeconds, float durationSeconds, float volume, float pitch) {
         this.sourceFile = sourceFile;
         this.count = count;
         this.startSeconds = startSeconds;
         this.durationSeconds = durationSeconds;
+        this.volume = Math.max(0f, volume);
+        this.pitch = Math.max(0.01f, pitch);
 
         alSource = AL10.alGenSources();
         alBuffers = new int[BUFFER_COUNT];
         AL10.alGenBuffers(alBuffers);
+        AL10.alSourcef(alSource, AL10.AL_GAIN, this.volume);
+        AL10.alSourcef(alSource, AL10.AL_PITCH, this.pitch);
     }
 
     public void play() {

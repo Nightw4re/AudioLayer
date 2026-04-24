@@ -8,10 +8,28 @@ public final class AudiolayerClientHandler {
 
     public static void onPlay(AudiolayerPlayPacket pkt) {
         AudiolayerProvider.get().ifPresent(api ->
-                api.play(pkt.soundId(), pkt.count(), pkt.startSeconds(), pkt.durationSeconds()));
+                api.play(
+                        pkt.soundId(),
+                        pkt.count(),
+                        pkt.startSeconds(),
+                        pkt.durationSeconds(),
+                        pkt.volume(),
+                        pkt.pitch(),
+                        pkt.category()
+                ));
     }
 
     public static void onStop() {
-        AudiolayerProvider.get().ifPresent(AudiolayerApi::stop);
+        onStop(new AudiolayerStopPacket());
+    }
+
+    public static void onStop(AudiolayerStopPacket pkt) {
+        AudiolayerProvider.get().ifPresent(api -> {
+            if (pkt.category() == null || pkt.category().isBlank()) {
+                api.stop();
+            } else {
+                api.stop(pkt.category());
+            }
+        });
     }
 }
