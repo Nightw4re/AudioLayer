@@ -1,6 +1,6 @@
 # Audiolayer
 
-Audiolayer is a NeoForge 1.21.1 mod that streams MP3 files directly from disk and plays them via OpenAL under the `audiolayer` namespace. No conversion, no resource pack — just drop in an MP3 and play it.
+Audiolayer is a NeoForge 1.21.1 mod that streams MP3 files directly from disk and plays them via OpenAL under the `audiolayer` namespace. No conversion, no resource pack - just drop in an MP3 and play it.
 
 ## Table of Contents
 
@@ -11,6 +11,7 @@ Audiolayer is a NeoForge 1.21.1 mod that streams MP3 files directly from disk an
 - [Server Support](#server-support)
 - [Mod Integration API](#mod-integration-api)
 - [KubeJS Integration](#kubejs-integration)
+- [Compatible Mods](#compatible-mods)
 - [Folder Layout](#folder-layout)
 - [Development](#development)
 
@@ -20,7 +21,7 @@ Audiolayer is a NeoForge 1.21.1 mod that streams MP3 files directly from disk an
 
 1. Install NeoForge 1.21.1.
 2. Drop `audiolayer-neoforge-<version>.jar` into your `mods/` folder.
-3. Start Minecraft — the mod creates the input folder and extracts a sample MP3 automatically.
+3. Start Minecraft - the mod creates the input folder and extracts a sample MP3 automatically.
 
 ---
 
@@ -81,15 +82,18 @@ All commands require OP level 2 on a server. In singleplayer they are available 
 ### Play a sound
 
 ```
-/audiolayer play <sound_id> [count] [start] [duration]
+/audiolayer play <sound_id> [count] [start] [duration] [volume] [pitch] [category]
 ```
 
 | Argument | Type | Default | Meaning |
 |---|---|---|---|
-| `sound_id` | ResourceLocation | — | Sound to play (tab-complete supported) |
-| `count` | integer ≥ 0 | `1` | Number of repetitions. `0` = infinite loop |
-| `start` | float ≥ 0 | `0` | Start position in seconds |
-| `duration` | float ≥ 0 | `0` | Duration per repetition in seconds. `0` = until end of file |
+| `sound_id` | ResourceLocation | - | Sound to play (tab-complete supported) |
+| `count` | integer >= 0 | `1` | Number of repetitions. `0` = infinite loop |
+| `start` | float >= 0 | `0` | Start position in seconds |
+| `duration` | float >= 0 | `0` | Duration per repetition in seconds. `0` = until end of file |
+| `volume` | float >= 0 | `1` | OpenAL gain. `1` = normal volume |
+| `pitch` | float >= 0.01 | `1` | OpenAL pitch. `1` = normal pitch |
+| `category` | word | `master` | Playback channel/category. New playback in the same category replaces the old one |
 
 Examples:
 
@@ -105,13 +109,18 @@ Examples:
 
 # Play twice, starting at 5 s, playing 30 s each time
 /audiolayer play audiolayer:music.theme 2 5 30
+
+# Play quieter in the music channel
+/audiolayer play audiolayer:music.theme 1 0 0 0.5 1 music
 ```
 
 ### Stop playback
 
 ```
-/audiolayer stop
+/audiolayer stop [category]
 ```
+
+Without `category`, this stops all Audiolayer playback. With `category`, it stops only that playback channel.
 
 ### Reload sounds
 
@@ -125,11 +134,11 @@ Rescans the input folder and updates the duration cache. Already-known files are
 
 ## Server Support
 
-Audiolayer commands work on a multiplayer server. The server sends a network packet to the client that issued the command — the sound plays on that client only.
+Audiolayer commands work on a multiplayer server. The server sends a network packet to the client that issued the command - the sound plays on that client only.
 
 **Requirement:** every player who wants to hear Audiolayer sounds must have the mod installed with the same MP3 files in their `config/audiolayer/input/` folder (or a modpack that ships those files).
 
-The server itself never plays audio; it only routes commands to the right client.
+The server itself never plays audio; it only routes commands to the right client. If a client is missing the requested MP3, Audiolayer logs a warning on that client.
 
 ---
 
@@ -199,8 +208,21 @@ public interface AudiolayerApi {
      */
     void play(SoundId id, int count, float startSeconds, float durationSeconds);
 
+    /**
+     * Plays with mixer options.
+     *
+     * @param volume   OpenAL gain; 1 = normal volume
+     * @param pitch    OpenAL pitch; 1 = normal pitch
+     * @param category playback channel/category such as music, ambient, or ui
+     */
+    void play(SoundId id, int count, float startSeconds, float durationSeconds,
+              float volume, float pitch, String category);
+
     /** Stops the currently playing Audiolayer sound. */
     void stop();
+
+    /** Stops one playback channel/category. */
+    void stop(String category);
 }
 ```
 
@@ -240,7 +262,7 @@ AudiolayerProvider.get().ifPresent(api -> {
 
 ## KubeJS Integration
 
-Audiolayer ships a built-in [KubeJS](https://kubejs.com/) plugin. When KubeJS 2101+ is present, a global `Audiolayer` binding is available in all client scripts — no extra setup required.
+Audiolayer ships a built-in [KubeJS](https://kubejs.com/) plugin. When KubeJS 2101+ is present, a global `Audiolayer` binding is available in all client scripts - no extra setup required.
 
 ### Requirements
 
@@ -256,15 +278,21 @@ Audiolayer ships a built-in [KubeJS](https://kubejs.com/) plugin. When KubeJS 21
 Audiolayer.play("audiolayer:music.theme")
 
 // Play with full control: play(soundId, count, startSeconds, durationSeconds)
-//   count = 0  → infinite loop
-//   start > 0  → seek to position
-//   duration > 0 → limit each repetition length
+//   count = 0 -> infinite loop
+//   start > 0 -> seek to position
+//   duration > 0 -> limit each repetition length
 Audiolayer.play("audiolayer:music.theme", 3, 0, 0)       // 3 repetitions
 Audiolayer.play("audiolayer:music.theme", 0, 10, 0)      // infinite loop from 10 s
 Audiolayer.play("audiolayer:music.theme", 2, 5, 30)      // twice, 30 s each, starting at 5 s
 
+// Play with mixer options: play(soundId, count, start, duration, volume, pitch, category)
+Audiolayer.play("audiolayer:music.theme", 1, 0, 0, 0.5, 1.0, "music")
+
 // Stop whatever is currently playing
 Audiolayer.stop()
+
+// Stop one playback channel
+Audiolayer.stop("music")
 
 // Check if a sound is loaded
 if (Audiolayer.isLoaded("audiolayer:music.theme")) {
@@ -314,14 +342,39 @@ PlayerEvents.chat(event => {
 
 ---
 
+## Compatible Mods
+
+These mods work alongside Audiolayer and can use MP3 playback via the Audiolayer API or through the Etched jukebox integration.
+
+### [Etched](https://modrinth.com/mod/etched) (5.0.1+)
+
+Set any `audiolayer:<sound_id>` string as the URL/sound event on an Etched Music Disc. Inserting the disc into a jukebox triggers the Audiolayer hook and plays the MP3. Removing the disc stops playback.
+
+**How to set up:**
+1. Place MP3 files in `config/audiolayer/input/` and run `/audiolayer reload`.
+2. At an Etching Table, set the disc URL to `audiolayer:sample` (or any loaded sound ID).
+3. Insert the etched disc into a jukebox - the MP3 plays automatically.
+
+> Use `/audiolayer list` to see all loaded sound IDs.
+
+### [KubeJS](https://kubejs.com/) (2101+ for 1.21.1)
+
+Control playback from scripts via the built-in `Audiolayer` global. See the [KubeJS Integration](#kubejs-integration) section for the full API.
+
+### [AmbientSounds](https://modrinth.com/mod/ambientsounds), [Reactive Music](https://modrinth.com/mod/reactive), [Ambient Environment](https://modrinth.com/mod/ambient-environment), [Euphonium](https://modrinth.com/mod/euphonium)
+
+These mods manage when music plays (biome-based, event-based, etc.). Use the [Audiolayer API](#mod-integration-api) in a companion mod or KubeJS script to substitute MP3 playback at the points where they trigger sounds.
+
+---
+
 ## Folder Layout
 
 ```
 config/
   audiolayer/
-    input/        ← place your MP3 files here (sample.mp3 is extracted on first run)
+    input/        <- place your MP3 files here (sample.mp3 is extracted on first run)
     cache/
-      index.json  ← tracks file hashes and durations across restarts
+      index.json  <- tracks file hashes and durations across restarts
 ```
 
 ---
@@ -345,4 +398,4 @@ npm run build
 ./gradlew runClient
 ```
 
-**Stack:** NeoForge 1.21.1 · Minecraft 1.21.1 · Java 21 · JLayer 1.0.1 (MP3 streaming)
+**Stack:** NeoForge 1.21.1 | Minecraft 1.21.1 | Java 21 | JLayer 1.0.1 (MP3 streaming)

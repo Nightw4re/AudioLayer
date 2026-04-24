@@ -19,7 +19,9 @@ public final class TestRunner {
             "com.audiolayer.registry.AudiolayerManagerTest",
             "com.audiolayer.registry.AudiolayerManagerCacheTest",
             "com.audiolayer.resource.RuntimeResourcePackWriterTest",
-            "com.audiolayer.kubejs.AudiolayerJSWrapperTest"
+            "com.audiolayer.kubejs.AudiolayerJSWrapperTest",
+            "com.audiolayer.compat.CompatApiContractTest",
+            "com.audiolayer.compat.ModCompatMp3Test"
     };
 
     public static void main(String[] args) throws Exception {

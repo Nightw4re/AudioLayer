@@ -10,6 +10,7 @@ import javazoom.jl.decoder.SampleBuffer;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 
 /**
@@ -23,6 +24,29 @@ import java.nio.file.Path;
  *   }
  */
 public final class Mp3StreamDecoder implements AutoCloseable {
+    // jlayer 1.0.1 uses ms_per_frame(), jlayer 1.0.3 (bundled by Etched) renamed it to msPerFrame()
+    private static final Method MS_PER_FRAME = resolveMsPerFrame();
+
+    private static Method resolveMsPerFrame() {
+        try {
+            return Header.class.getMethod("msPerFrame");
+        } catch (NoSuchMethodException e) {
+            try {
+                return Header.class.getMethod("ms_per_frame");
+            } catch (NoSuchMethodException ex) {
+                throw new IllegalStateException("jlayer Header has neither msPerFrame() nor ms_per_frame()", ex);
+            }
+        }
+    }
+
+    private static float msPerFrame(Header h) {
+        try {
+            return (float) MS_PER_FRAME.invoke(h);
+        } catch (Exception e) {
+            return 0f;
+        }
+    }
+
     private final Bitstream bitstream;
     private final Decoder decoder;
     private final int channels;
@@ -79,7 +103,7 @@ public final class Mp3StreamDecoder implements AutoCloseable {
             Bitstream bs = new Bitstream(bis);
             Header h;
             while ((h = bs.readFrame()) != null) {
-                total += h.ms_per_frame() / 1000f;
+                total += msPerFrame(h) / 1000f;
                 bs.closeFrame();
             }
         } catch (Exception ignored) {}

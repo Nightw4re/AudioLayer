@@ -21,12 +21,12 @@ public final class AudiolayerJSWrapper {
 
     private final Supplier<Optional<AudiolayerApi>> apiSupplier;
 
-    /** Production constructor — resolves through {@link AudiolayerProvider}. */
+    /** Production constructor - resolves through {@link AudiolayerProvider}. */
     public AudiolayerJSWrapper() {
         this(AudiolayerProvider::get);
     }
 
-    /** Testing constructor — injects a custom API supplier. */
+    /** Testing constructor - injects a custom API supplier. */
     AudiolayerJSWrapper(Supplier<Optional<AudiolayerApi>> apiSupplier) {
         this.apiSupplier = apiSupplier;
     }
@@ -48,9 +48,37 @@ public final class AudiolayerJSWrapper {
         api().ifPresent(a -> a.play(parseSoundId(soundId), count, (float) start, (float) duration));
     }
 
+    /**
+     * Plays a sound with mixer options.
+     *
+     * @param soundId  sound in {@code namespace:path} format
+     * @param count    repetitions; 0 = infinite loop
+     * @param start    start position in seconds; 0 = from beginning
+     * @param duration per-repetition duration in seconds; 0 = until end of file
+     * @param volume   gain; 1 = normal volume
+     * @param pitch    pitch; 1 = normal pitch
+     * @param category logical category such as music, ambient, or ui
+     */
+    public void play(String soundId, int count, double start, double duration, double volume, double pitch, String category) {
+        api().ifPresent(a -> a.play(
+                parseSoundId(soundId),
+                count,
+                (float) start,
+                (float) duration,
+                (float) volume,
+                (float) pitch,
+                category
+        ));
+    }
+
     /** Stops the currently playing Audiolayer sound. */
     public void stop() {
         api().ifPresent(AudiolayerApi::stop);
+    }
+
+    /** Stops the sound currently playing in the given category/channel. */
+    public void stop(String category) {
+        api().ifPresent(a -> a.stop(category));
     }
 
     /** Returns {@code true} if the given sound is loaded and ready to play. */
@@ -65,7 +93,7 @@ public final class AudiolayerJSWrapper {
                 .orElse(Collections.emptyList());
     }
 
-    /** Rescans the input directory and rebuilds the runtime resource pack. */
+    /** Rescans the input directory and updates the duration cache. */
     public void reload() {
         api().ifPresent(AudiolayerApi::reload);
     }
