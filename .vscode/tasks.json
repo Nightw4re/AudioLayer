@@ -22,11 +22,6 @@
       "type": "shell",
       "command": ".\\gradlew.bat",
       "args": ["runClient"],
-      "options": {
-        "env": {
-          "GRADLE_USER_HOME": "${workspaceFolder}\\.gradle"
-        }
-      },
       "group": "build",
       "problemMatcher": []
     },
@@ -35,11 +30,6 @@
       "type": "shell",
       "command": ".\\gradlew.bat",
       "args": ["runClient", "--debug-jvm"],
-      "options": {
-        "env": {
-          "GRADLE_USER_HOME": "${workspaceFolder}\\.gradle"
-        }
-      },
       "isBackground": true,
       "problemMatcher": {
         "owner": "custom",
