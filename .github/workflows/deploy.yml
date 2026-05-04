@@ -9,6 +9,16 @@ on:
       - main
     paths:
       - 'gradle.properties'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Publish target
+        required: true
+        type: choice
+        options:
+          - curseforge
+          - modrinth
+          - both
 
 permissions:
   contents: write
@@ -39,7 +49,7 @@ jobs:
 
   build:
     needs: version_check
-    if: needs.version_check.outputs.changed == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.version_check.outputs.changed == 'true'
     runs-on: ubuntu-latest
     outputs:
       current: ${{ steps.version.outputs.current }}
@@ -109,7 +119,7 @@ jobs:
 
   publish_curseforge:
     needs: build
-    if: needs.build.outputs.current != ''
+    if: needs.build.outputs.current != '' && (github.event_name == 'push' || github.event.inputs.target == 'curseforge' || github.event.inputs.target == 'both')
     runs-on: ubuntu-latest
     steps:
       - name: Download build artifact
@@ -123,6 +133,31 @@ jobs:
         with:
           curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}.jar
+          name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}
+          version: ${{ needs.build.outputs.current }}
+          version-type: release
+          changelog: ${{ needs.build.outputs.changelog }}
+          loaders: neoforge
+          game-versions: 1.21.1
+          java: 21
+
+  publish_modrinth:
+    needs: build
+    if: needs.build.outputs.current != '' && (github.event_name == 'push' || github.event.inputs.target == 'modrinth' || github.event.inputs.target == 'both')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}
+          path: build/libs
+
+      - name: Publish to Modrinth
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
           files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}.jar
           name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}
           version: ${{ needs.build.outputs.current }}
