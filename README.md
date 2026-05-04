@@ -1,6 +1,6 @@
 # Audiolayer
 
-Audiolayer is a NeoForge 1.21.1 mod that streams MP3 files directly from disk and plays them via OpenAL under the `audiolayer` namespace. No conversion, no resource pack - just drop in an MP3 and play it.
+Audiolayer is a NeoForge 1.21.1 mod that streams MP3 files directly from disk and plays them via OpenAL under the `audiolayer` namespace. No conversion, no resource-pack conversion step - just drop in an MP3 and play it.
 
 ## Table of Contents
 
@@ -33,6 +33,30 @@ Place **MP3** files into:
 config/audiolayer/input/
 ```
 
+You can also ship MP3s inside a resource pack at:
+
+```
+assets/audiolayer/sounds/
+```
+
+For main menu music, place the file here:
+
+```
+assets/audiolayer/sounds/music/menu/<track>.mp3
+```
+
+You can also use the legacy single-track form:
+
+```
+assets/audiolayer/sounds/music/menu.mp3
+```
+
+If you want only your own soundtrack and no legacy/default track mixing, put the files in:
+
+```
+assets/audiolayer/sounds/music/menu/exclusive/
+```
+
 Subfolders become part of the sound ID. Example structure:
 
 ```
@@ -47,6 +71,30 @@ config/audiolayer/input/
 ```
 
 Run `/audiolayer reload` to pick up changes without restarting.
+
+Resource-pack sounds are loaded on the client and extracted into `config/audiolayer/cache/resource-pack/` for playback.
+
+Audiolayer will automatically start the `audiolayer:music.menu` track and/or the `audiolayer:music.menu.*` playlist on the title screen if those sounds exist. Tracks are shuffled and played one after another.
+If any `audiolayer:music.menu.exclusive.*` track exists, Audiolayer switches to exclusive mode and ignores the legacy/menu mix for that playlist.
+This menu-only routing is active whenever no world is loaded (`minecraft.level == null`), so the music keeps playing through submenus like `Options` and stops once you enter a world.
+
+Etched music discs use a separate playback category, so disc playback does not stop or replace the menu soundtrack.
+
+## Vanilla Music Replacement
+
+Audiolayer also mirrors vanilla background music timing in-game.
+
+- The vanilla Minecraft music scheduler still decides when music starts.
+- When Minecraft tries to play a vanilla `minecraft:music.*` track, Audiolayer can replace it with the matching `audiolayer:music.*` MP3 if that asset is loaded.
+- This means you can override vanilla menu, overworld, Nether, End, and other music tracks with MP3 files in the same logical path layout.
+
+Example:
+
+```
+assets/audiolayer/sounds/music/game/track1.mp3
+assets/audiolayer/sounds/music/overworld/forest.mp3
+assets/audiolayer/sounds/music/menu.mp3
+```
 
 ---
 
@@ -136,7 +184,7 @@ Rescans the input folder and updates the duration cache. Already-known files are
 
 Audiolayer commands work on a multiplayer server. The server sends a network packet to the client that issued the command - the sound plays on that client only.
 
-**Requirement:** every player who wants to hear Audiolayer sounds must have the mod installed with the same MP3 files in their `config/audiolayer/input/` folder (or a modpack that ships those files).
+**Requirement:** every player who wants to hear Audiolayer sounds must have the mod installed with the same MP3 files in their `config/audiolayer/input/` folder or inside a matching resource pack.
 
 The server itself never plays audio; it only routes commands to the right client. If a client is missing the requested MP3, Audiolayer logs a warning on that client.
 
@@ -376,6 +424,29 @@ config/
     cache/
       index.json  <- tracks file hashes and durations across restarts
 ```
+
+Resource-pack layout:
+
+```
+assets/
+  audiolayer/
+    sounds/
+      music/
+        menu.mp3               <- legacy single-track menu music
+        menu/
+          track1.mp3           <- shuffled menu playlist
+          track2.mp3
+          exclusive/
+            my_theme.mp3       <- exclusive menu soundtrack, no mixing with legacy/menu files
+```
+
+Menu soundtrack rules:
+
+- `assets/audiolayer/sounds/music/menu.mp3` is treated as a single legacy menu track.
+- `assets/audiolayer/sounds/music/menu/*.mp3` are treated as a shuffled menu playlist.
+- `assets/audiolayer/sounds/music/menu/exclusive/*.mp3` enables exclusive mode.
+- Exclusive mode ignores the legacy `music/menu.mp3` track and the non-exclusive `music/menu/*.mp3` playlist.
+- If no exclusive tracks exist, Audiolayer mixes the legacy track and the playlist together.
 
 ---
 

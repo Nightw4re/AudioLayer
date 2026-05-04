@@ -14,11 +14,14 @@ import com.audiolayer.config.AudiolayerConfig;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 public final class AudiolayerManager implements AudiolayerService {
@@ -27,6 +30,7 @@ public final class AudiolayerManager implements AudiolayerService {
     private final InputAudioScanner scanner;
     private final CacheIndexRepository cacheIndexRepository;
     private final Function<Path, Float> durationReader;
+    private Supplier<List<AudioSourceDescriptor>> additionalSourceScanner = List::of;
     private final Map<SoundId, LoadedAudioAsset> loaded = new LinkedHashMap<>();
 
     public AudiolayerManager(
@@ -56,10 +60,19 @@ public final class AudiolayerManager implements AudiolayerService {
         return Optional.ofNullable(loaded.get(id));
     }
 
+    public void setAdditionalSourceScanner(Supplier<List<AudioSourceDescriptor>> additionalSourceScanner) {
+        this.additionalSourceScanner = additionalSourceScanner == null ? List::of : additionalSourceScanner;
+    }
+
     @Override
     public ReloadSummary reload() {
         try {
-            var descriptors = scanner.scan(config.inputDirectory());
+            List<AudioSourceDescriptor> descriptors = new ArrayList<>(scanner.scan(config.inputDirectory()));
+            for (AudioSourceDescriptor descriptor : additionalSourceScanner.get()) {
+                if (descriptors.stream().noneMatch(existing -> existing.soundId().equals(descriptor.soundId()))) {
+                    descriptors.add(descriptor);
+                }
+            }
             var index = cacheIndexRepository.load();
             loaded.clear();
 

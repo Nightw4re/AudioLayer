@@ -14,34 +14,57 @@ permissions:
   contents: write
 
 jobs:
-  deploy:
+  version_check:
     runs-on: ubuntu-latest
+    outputs:
+      current: ${{ steps.version_check.outputs.current }}
+      changed: ${{ steps.version_check.outputs.changed }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Check version changed
         id: version_check
+        shell: bash
         run: |
-          CURRENT=$(grep '^mod_version' gradle.properties | cut -d= -f2)
-          PREVIOUS=$(git show HEAD~1:gradle.properties 2>/dev/null | grep '^mod_version' | cut -d= -f2 || echo "")
-          echo "current=$CURRENT" >> $GITHUB_OUTPUT
-          if [ "$CURRENT" != "$PREVIOUS" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
+          current=$(grep '^mod_version' gradle.properties | cut -d= -f2)
+          previous=$(git show HEAD~1:gradle.properties 2>/dev/null | grep '^mod_version' | cut -d= -f2 || true)
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          if [ -n "$previous" ] && [ "$current" = "$previous" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+  build:
+    needs: version_check
+    if: needs.version_check.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      current: ${{ steps.version.outputs.current }}
+      changelog: ${{ steps.changelog.outputs.content }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Export version
+        id: version
+        run: echo "current=${{ needs.version_check.outputs.current }}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Set up Java 21
-        if: steps.version_check.outputs.changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v4
+        uses: actions/setup-java@v4
         with:
           java-version: 21
           distribution: temurin
 
       - name: Generate changelog
-        if: steps.version_check.outputs.changed == 'true'
         id: changelog
         uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4
         with:
@@ -51,46 +74,60 @@ jobs:
           OUTPUT: CHANGELOG.md
 
       - name: Build
-        if: steps.version_check.outputs.changed == 'true'
         run: gradle build --no-daemon
 
+      - name: Validate release payload
+        shell: bash
+        run: |
+          JAR="build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.version_check.outputs.current }}.jar"
+          if [ ! -f "$JAR" ]; then
+            echo "Expected release jar not found: $JAR"
+            exit 1
+          fi
+          if [ ! -s "$JAR" ]; then
+            echo "Release jar is empty: $JAR"
+            exit 1
+          fi
+          if [ -z "${{ steps.changelog.outputs.content }}" ]; then
+            echo "Changelog is empty"
+            exit 1
+          fi
+
       - name: Create GitHub Release
-        if: steps.version_check.outputs.changed == 'true'
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version_check.outputs.current }}
-          name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}
+          tag_name: v${{ needs.version_check.outputs.current }}
+          name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ needs.version_check.outputs.current }}
           body: ${{ steps.changelog.outputs.content }}
-          files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}.jar
+          files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.version_check.outputs.current }}.jar
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.version_check.outputs.current }}
+          path: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.version_check.outputs.current }}.jar
+
+  publish_curseforge:
+    needs: build
+    if: needs.build.outputs.current != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}
+          path: build/libs
 
       - name: Publish to CurseForge
-        if: steps.version_check.outputs.changed == 'true'
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
-
-          files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}.jar
-          name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}
-          version: ${{ steps.version_check.outputs.current }}
+          files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}.jar
+          name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}
+          version: ${{ needs.build.outputs.current }}
           version-type: release
-          changelog: ${{ steps.changelog.outputs.content }}
-          loaders: neoforge
-          game-versions: 1.21.1
-          java: 21
-
-      - name: Publish to Modrinth
-        if: steps.version_check.outputs.changed == 'true'
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-
-          files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}.jar
-          name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}
-          version: ${{ steps.version_check.outputs.current }}
-          version-type: release
-          changelog: ${{ steps.changelog.outputs.content }}
+          changelog: ${{ needs.build.outputs.changelog }}
           loaders: neoforge
           game-versions: 1.21.1
           java: 21

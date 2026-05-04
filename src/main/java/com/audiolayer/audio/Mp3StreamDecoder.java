@@ -94,7 +94,7 @@ public final class Mp3StreamDecoder implements AutoCloseable {
 
     /**
      * Reads the full file to compute duration in seconds.
-     * This is done once at reload time and cached — not on every play.
+     * This is done once at reload time and cached â€” not on every play.
      */
     public static float readDurationSeconds(Path mp3) {
         float total = 0f;
@@ -109,4 +109,5 @@ public final class Mp3StreamDecoder implements AutoCloseable {
         } catch (Exception ignored) {}
         return total;
     }
+
 }

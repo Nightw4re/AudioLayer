@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, readdirSync, statSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
+import { mkdirSync, rmSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname, relative } from 'node:path';
 
@@ -20,6 +20,7 @@ const MINECRAFT_DEPENDENT = [
   'AudiolayerPlayPacket.java',
   'AudiolayerStopPacket.java',
   'ClientAudiolayerApi.java',
+  'AudiolayerSoundEventHandler.java',
   'AudiolayerSoundInstance.java',
   'SoundSeekUtil.java',
   'Mp3SoundInstance.java',

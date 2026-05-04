@@ -70,4 +70,8 @@ public interface AudiolayerApi {
     default void stop(String category) {
         stop();
     }
+
+    /** Updates the volume of a currently playing category/channel, if supported. */
+    default void setVolume(String category, float volume) {
+    }
 }
