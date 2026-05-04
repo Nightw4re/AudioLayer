@@ -6,25 +6,9 @@ env:
 on:
   push:
     branches:
-      - release/**
-      - alpha/**
+      - main
     paths:
       - 'gradle.properties'
-  pull_request:
-    branches:
-      - release/**
-      - alpha/**
-    types:
-      - closed
-  workflow_dispatch:
-    inputs:
-      release_channel:
-        description: Release channel
-        required: true
-        type: choice
-        options:
-          - release
-          - alpha
 
 permissions:
   contents: write
@@ -142,7 +126,7 @@ jobs:
           files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}.jar
           name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}
           version: ${{ needs.build.outputs.current }}
-          version-type: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_channel || (startsWith(github.ref_name, 'alpha/') && 'alpha' || 'release') }}
+          version-type: release
           changelog: ${{ needs.build.outputs.changelog }}
           loaders: neoforge
           game-versions: 1.21.1
