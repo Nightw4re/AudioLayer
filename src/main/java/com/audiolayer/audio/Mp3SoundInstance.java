@@ -20,8 +20,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class Mp3SoundInstance {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final int BUFFER_COUNT = 4;
-    private static final int BUFFER_SIZE_SAMPLES = 8192; // samples per channel per buffer
+    private static final int BUFFER_COUNT = 12;
+    private static final int BUFFER_SIZE_SAMPLES = 65536; // samples per channel per buffer
+    private static final int FADE_SAMPLES = 48;
 
     private final Path sourceFile;
     private final int count;
@@ -65,6 +66,10 @@ public final class Mp3SoundInstance {
         streamTask = worker.submit(this::streamLoop);
     }
 
+    public void setVolume(float volume) {
+        AL10.alSourcef(alSource, AL10.AL_GAIN, Math.max(0f, volume));
+    }
+
     public void stop() {
         stopped.set(true);
         if (streamTask != null) streamTask.cancel(true);
@@ -105,7 +110,13 @@ public final class Mp3SoundInstance {
                 loop.advance((float) (pcm.length / decoder.channels()) / sampleRate);
             }
 
-            AL10.alSourcePlay(alSource);
+            // Give OpenAL a bit more runway before starting playback.
+            if (AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED) >= 2) {
+                AL10.alSourcePlay(alSource);
+            }
+            else if (AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED) > 0) {
+                AL10.alSourcePlay(alSource);
+            }
 
             while (!stopped.get() && !loop.isFinished()) {
                 int processed = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_PROCESSED);
@@ -148,7 +159,7 @@ public final class Mp3SoundInstance {
 
                 if (!isBuffersQueued() && loop.isFinished()) break;
 
-                Thread.sleep(10);
+                Thread.sleep(15);
             }
 
             decoder.close();
@@ -208,9 +219,43 @@ public final class Mp3SoundInstance {
     }
 
     private void uploadBuffer(int bufferId, short[] pcm, int format, int sampleRate) {
+        applyEdgeFade(pcm);
         ByteBuffer bb = ByteBuffer.allocateDirect(pcm.length * 2).order(ByteOrder.LITTLE_ENDIAN);
         for (short s : pcm) bb.putShort(s);
         bb.flip();
         AL10.alBufferData(bufferId, format, bb, sampleRate);
+    }
+
+    private void applyEdgeFade(short[] pcm) {
+        if (pcm.length == 0) {
+            return;
+        }
+        int channels = 2;
+        int samplesPerChannel = pcm.length / channels;
+        int fade = Math.min(FADE_SAMPLES, samplesPerChannel / 2);
+        if (fade <= 0) {
+            return;
+        }
+
+        for (int i = 0; i < fade; i++) {
+            float inGain = (i + 1f) / fade;
+            float outGain = 1f - (i + 1f) / fade;
+            int inIndex = i * channels;
+            int outIndex = pcm.length - (fade - i) * channels;
+            for (int ch = 0; ch < channels; ch++) {
+                if (inIndex + ch < pcm.length) {
+                    pcm[inIndex + ch] = clampToShort(Math.round(pcm[inIndex + ch] * inGain));
+                }
+                if (outIndex + ch >= 0 && outIndex + ch < pcm.length) {
+                    pcm[outIndex + ch] = clampToShort(Math.round(pcm[outIndex + ch] * outGain));
+                }
+            }
+        }
+    }
+
+    private short clampToShort(int value) {
+        if (value > Short.MAX_VALUE) return Short.MAX_VALUE;
+        if (value < Short.MIN_VALUE) return Short.MIN_VALUE;
+        return (short) value;
     }
 }

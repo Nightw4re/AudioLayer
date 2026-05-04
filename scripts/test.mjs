@@ -27,6 +27,7 @@ const MINECRAFT_DEPENDENT = [
   'AudiolayerPlayPacket.java',
   'AudiolayerStopPacket.java',
   'ClientAudiolayerApi.java',
+  'AudiolayerSoundEventHandler.java',
   'AudiolayerSoundInstance.java',
   'SoundSeekUtil.java',
   'Mp3SoundInstance.java',

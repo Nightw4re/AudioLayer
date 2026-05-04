@@ -9,14 +9,18 @@ import java.security.NoSuchAlgorithmException;
 
 public final class HashService {
     public String hash(Path file) throws IOException {
+        try (InputStream in = Files.newInputStream(file)) {
+            return hash(in);
+        }
+    }
+
+    public String hash(InputStream inputStream) throws IOException {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            try (InputStream in = Files.newInputStream(file)) {
-                byte[] buffer = new byte[8192];
-                int read;
-                while ((read = in.read(buffer)) != -1) {
-                    digest.update(buffer, 0, read);
-                }
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = inputStream.read(buffer)) != -1) {
+                digest.update(buffer, 0, read);
             }
             return toHex(digest.digest());
         } catch (NoSuchAlgorithmException e) {

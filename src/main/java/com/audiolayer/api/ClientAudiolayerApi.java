@@ -11,6 +11,7 @@ import java.util.Set;
 public final class ClientAudiolayerApi implements AudiolayerApi {
     private final AudiolayerManager manager;
     private final Map<String, Mp3SoundInstance> instancesByChannel = new LinkedHashMap<>();
+    private final Map<String, SoundId> soundByChannel = new LinkedHashMap<>();
 
     public ClientAudiolayerApi(AudiolayerManager manager) {
         this.manager = manager;
@@ -58,9 +59,15 @@ public final class ClientAudiolayerApi implements AudiolayerApi {
     ) {
         manager.get(id).ifPresent(asset -> {
             String channel = normalizeChannel(category);
+            SoundId current = soundByChannel.get(channel);
+            Mp3SoundInstance currentInstance = instancesByChannel.get(channel);
+            if (id.equals(current) && currentInstance != null && !currentInstance.isStopped()) {
+                return;
+            }
             stopChannel(channel);
             Mp3SoundInstance instance = new Mp3SoundInstance(asset.sourceFile(), count, startSeconds, durationSeconds, volume, pitch);
             instancesByChannel.put(channel, instance);
+            soundByChannel.put(channel, id);
             instance.play();
         });
     }
@@ -75,8 +82,17 @@ public final class ClientAudiolayerApi implements AudiolayerApi {
         stopChannel(normalizeChannel(category));
     }
 
+    @Override
+    public void setVolume(String category, float volume) {
+        Mp3SoundInstance instance = instancesByChannel.get(normalizeChannel(category));
+        if (instance != null && !instance.isStopped()) {
+            instance.setVolume(volume);
+        }
+    }
+
     private void stopChannel(String channel) {
         Mp3SoundInstance instance = instancesByChannel.remove(channel);
+        soundByChannel.remove(channel);
         if (instance != null && !instance.isStopped()) {
             instance.stop();
         }
