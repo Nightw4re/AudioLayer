@@ -80,9 +80,6 @@ jobs:
           java-version: 21
           distribution: temurin
 
-      - name: Install
-        run: npm ci
-
       - name: Generate changelog
         id: changelog
         uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4
@@ -93,7 +90,7 @@ jobs:
           OUTPUT: CHANGELOG.md
 
       - name: Build
-        run: npm run build
+        run: gradle build --no-daemon
 
       - name: Validate release payload
         shell: bash
