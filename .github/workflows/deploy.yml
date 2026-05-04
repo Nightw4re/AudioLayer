@@ -131,3 +131,28 @@ jobs:
           loaders: neoforge
           game-versions: 1.21.1
           java: 21
+
+  publish_modrinth:
+    needs: build
+    if: needs.build.outputs.current != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}
+          path: build/libs
+
+      - name: Publish to Modrinth
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          files: build/libs/audiolayer-neoforge-${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}.jar
+          name: Audiolayer NeoForge v${{ env.MC_VERSION }}-${{ needs.build.outputs.current }}
+          version: ${{ needs.build.outputs.current }}
+          version-type: release
+          changelog: ${{ needs.build.outputs.changelog }}
+          loaders: neoforge
+          game-versions: 1.21.1
+          java: 21
