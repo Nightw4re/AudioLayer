@@ -30,7 +30,7 @@ jobs:
       current: ${{ steps.version_check.outputs.current }}
       changed: ${{ steps.version_check.outputs.changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -55,7 +55,7 @@ jobs:
       current: ${{ steps.version.outputs.current }}
       changelog: ${{ steps.changelog.outputs.content }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
